@@ -6,6 +6,8 @@ using System.Runtime.InteropServices;
 
 public class UseRenderingPlugin : MonoBehaviour
 {
+	//TODO: define variables here, rather than in CreateTextureAndPassToPlugin()
+
 	// Native plugin rendering events are only called if a plugin is used
 	// by some script. This means we have to DllImport at least
 	// one function in some active script.
@@ -15,117 +17,43 @@ public class UseRenderingPlugin : MonoBehaviour
 #if (UNITY_IOS || UNITY_TVOS || UNITY_WEBGL) && !UNITY_EDITOR
 	[DllImport ("__Internal")]
 #else
-	[DllImport ("RenderingPlugin")]
+	[DllImport ("Unity2GStreamerPlugin")]
 #endif
-	private static extern void SetTimeFromUnity(float t);
+	private static extern void SetTimeFromUnity(float t); //example from Unity, keeps the plugin loaded
 
+	//import our dll's functions:
+	[DllImport("Unity2GStreamerPlugin")] 
+	private static extern void SetTextureFromUnity(System.IntPtr texture, int w, int h); //tells the plugin where our rendertexture is
 
-	// We'll also pass native pointer to a texture in Unity.
-	// The plugin will fill texture data from native code.
-#if (UNITY_IOS || UNITY_TVOS || UNITY_WEBGL) && !UNITY_EDITOR
-	[DllImport ("__Internal")]
-#else
-	[DllImport ("RenderingPlugin")]
-#endif
-	private static extern void SetTextureFromUnity(System.IntPtr texture, int w, int h);
+	[DllImport("Unity2GStreamerPlugin")] 
+	private static extern IntPtr GetRenderEventFunc(); //handles the received frame
 
-	// We'll pass native pointer to the mesh vertex buffer.
-	// Also passing source unmodified mesh data.
-	// The plugin will fill vertex data from native code.
-#if (UNITY_IOS || UNITY_TVOS || UNITY_WEBGL) && !UNITY_EDITOR
-	[DllImport ("__Internal")]
-#else
-	[DllImport ("RenderingPlugin")]
-#endif
-	private static extern void SetMeshBuffersFromUnity (IntPtr vertexBuffer, int vertexCount, IntPtr sourceVertices, IntPtr sourceNormals, IntPtr sourceUVs);
-
-#if (UNITY_IOS || UNITY_TVOS || UNITY_WEBGL) && !UNITY_EDITOR
-	[DllImport ("__Internal")]
-#else
-	[DllImport("RenderingPlugin")]
-#endif
-	private static extern IntPtr GetRenderEventFunc();
-
-#if UNITY_WEBGL && !UNITY_EDITOR
-	[DllImport ("__Internal")]
-	private static extern void RegisterPlugin();
-#endif
-
-	IEnumerator Start()
-	{
-#if UNITY_WEBGL && !UNITY_EDITOR
-		RegisterPlugin();
-#endif
-		CreateTextureAndPassToPlugin();
-		SendMeshBuffersToPlugin();
-		yield return StartCoroutine("CallPluginAtEndOfFrames");
+	IEnumerator Start() {
+		CreateTextureAndPassToPlugin(); //create our output render texture
+		yield return StartCoroutine("CallPluginAtEndOfFrames"); //setup a function to call when we're done rendering a frame
 	}
 
-	private void CreateTextureAndPassToPlugin()
-	{
-		// Create a texture
-		Texture2D tex = new Texture2D(256,256,TextureFormat.ARGB32,false);
-		// Set point filtering just so we can see the pixels clearly
-		tex.filterMode = FilterMode.Point;
-		// Call Apply() so it's actually uploaded to the GPU
-		tex.Apply();
+	private void CreateTextureAndPassToPlugin() {
+		Camera m_MainCamera = Camera.main;
+		m_MainCamera.pixelRect = new Rect(0, 0, 512, 512);
 
-		// Set texture onto our material
-		GetComponent<Renderer>().material.mainTexture = tex;
+		//create a new render texture based on the size of the main camera:
+		RenderTexture m_RenderTexture = new RenderTexture(m_MainCamera.pixelWidth, m_MainCamera.pixelHeight, 24, RenderTextureFormat.ARGB32);
+		m_RenderTexture.Create();
+		m_MainCamera.targetTexture = m_RenderTexture;
+		m_MainCamera.Render(); //note that we're manually calling Render on the camera here! this renders 1 frame.
 
-		// Pass texture pointer to the plugin
-		SetTextureFromUnity (tex.GetNativeTexturePtr(), tex.width, tex.height);
+		//tell our plugin where the texture is, so it can load it when we're done rendering:
+		SetTextureFromUnity(m_RenderTexture.GetNativeTexturePtr(), m_RenderTexture.width, m_RenderTexture.height);
+		Debug.Log("Setting texture from Unity");
 	}
 
-	private void SendMeshBuffersToPlugin ()
-	{
-		var filter = GetComponent<MeshFilter> ();
-		var mesh = filter.mesh;
-		// The plugin will want to modify the vertex buffer -- on many platforms
-		// for that to work we have to mark mesh as "dynamic" (which makes the buffers CPU writable --
-		// by default they are immutable and only GPU-readable).
-		mesh.MarkDynamic ();
-
-		// Make sure to have vertex colors so that the plugin can rely on a known
-		// vertex layout (position+normal+color+UV). Since Unity 2019.3 it's easier
-		// since there are APIs to query all that info.
-		var colors = mesh.colors;
-		mesh.colors = colors;
-
-		// However, mesh being dynamic also means that the CPU on most platforms can not
-		// read from the vertex buffer. Our plugin also wants original mesh data,
-		// so let's pass it as pointers to regular C# arrays.
-		// This bit shows how to pass array pointers to native plugins without doing an expensive
-		// copy: you have to get a GCHandle, and get raw address of that.
-		var vertices = mesh.vertices;
-		var normals = mesh.normals;
-		var uvs = mesh.uv;
-		GCHandle gcVertices = GCHandle.Alloc (vertices, GCHandleType.Pinned);
-		GCHandle gcNormals = GCHandle.Alloc (normals, GCHandleType.Pinned);
-		GCHandle gcUV = GCHandle.Alloc (uvs, GCHandleType.Pinned);
-
-		SetMeshBuffersFromUnity (mesh.GetNativeVertexBufferPtr (0), mesh.vertexCount, gcVertices.AddrOfPinnedObject (), gcNormals.AddrOfPinnedObject (), gcUV.AddrOfPinnedObject ());
-
-		gcVertices.Free ();
-		gcNormals.Free ();
-		gcUV.Free ();
-	}
-
-
-	private IEnumerator CallPluginAtEndOfFrames()
-	{
-		while (true) {
-			// Wait until all frame rendering is done
-			yield return new WaitForEndOfFrame();
-
-			// Set time for the plugin
-			SetTimeFromUnity (Time.timeSinceLevelLoad);
-
-			// Issue a plugin event with arbitrary integer identifier.
-			// The plugin can distinguish between different
-			// things it needs to do based on this ID.
-			// For our simple plugin, it does not matter which ID we pass here.
-			GL.IssuePluginEvent(GetRenderEventFunc(), 1);
+	private IEnumerator CallPluginAtEndOfFrames() {
+		while(true) 
+		{
+			yield return new WaitForEndOfFrame(); //wait until the frame is done
+			GL.IssuePluginEvent(GetRenderEventFunc(), 1); //tell our plugin it can begin processing our frame, the 1 is the event
+			//it may be possible to just use the eventID as the channelID later on.
 		}
 	}
 }

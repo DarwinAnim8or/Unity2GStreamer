@@ -8,5 +8,4 @@ EXPORTS
    UnityPluginUnload
    SetTimeFromUnity
    SetTextureFromUnity
-   SetMeshBuffersFromUnity
    GetRenderEventFunc
