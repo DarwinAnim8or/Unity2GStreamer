@@ -9,6 +9,7 @@ The reason for this is that it'd be great to seperate out your Unity instance, a
 ## Software Versions
 * Unity: 2021.3.15 LTS
 * Visual Studio: 2022 Community
+* Gstreamer: 1.22.0 
 
 ## Attribution
 This is based off the [template](https://github.com/Unity-Technologies/NativeRenderingPlugin) provided by Unity Technologies themselves.
