@@ -12,13 +12,19 @@
 #include "gl3w/glcorearb.h"
 #include "gl3w/gl3w.h"
 
+#include "gstRtsp.h"
+#include "CCTVServer.h"
+
+//CCTVServer server;
 
 // --------------------------------------------------------------------------
 // SetTimeFromUnity, an example function we export which is called by one of the scripts.
 
 static float g_Time;
 
-extern "C" void UNITY_INTERFACE_EXPORT UNITY_INTERFACE_API SetTimeFromUnity (float t) { g_Time = t; }
+extern "C" void UNITY_INTERFACE_EXPORT UNITY_INTERFACE_API SetTimeFromUnity (float t) { 
+	g_Time = t; 
+}
 
 
 // --------------------------------------------------------------------------
@@ -47,6 +53,8 @@ static void UNITY_INTERFACE_API OnGraphicsDeviceEvent(UnityGfxDeviceEventType ev
 static IUnityInterfaces* s_UnityInterfaces = NULL;
 static IUnityGraphics* s_Graphics = NULL;
 
+static CCTVServer* g_Server = nullptr;
+
 extern "C" void	UNITY_INTERFACE_EXPORT UNITY_INTERFACE_API UnityPluginLoad(IUnityInterfaces* unityInterfaces)
 {
 	s_UnityInterfaces = unityInterfaces;
@@ -63,11 +71,15 @@ extern "C" void	UNITY_INTERFACE_EXPORT UNITY_INTERFACE_API UnityPluginLoad(IUnit
 
 	// Run OnGraphicsDeviceEvent(initialize) manually on plugin load
 	OnGraphicsDeviceEvent(kUnityGfxDeviceEventInitialize);
+
+	//Start our server
+	g_Server = new CCTVServer(2001);
 }
 
 extern "C" void UNITY_INTERFACE_EXPORT UNITY_INTERFACE_API UnityPluginUnload()
 {
 	s_Graphics->UnregisterDeviceEventCallback(OnGraphicsDeviceEvent);
+	delete g_Server;
 }
 
 #if UNITY_WEBGL
@@ -180,6 +192,9 @@ static void AppendToLog(const char* string) {
 
 static void OnRenderEvent(int eventID)
 {
+	//Handle any packets from the server:
+	if (g_Server) g_Server->Update();
+
 	if (g_TextureHandle == NULL)
 		return;
 
@@ -200,7 +215,7 @@ static void OnRenderEvent(int eventID)
 	}
 
 	//TODO: Call a function here to pass our texture data into gstreamer!
-
+	//start_rtsp_stream(pData, g_TextureWidth, g_TextureHeight);
 
 	delete[] pData;
 	//we don't need to call the currentAPI again, because it's not "waiting" for us to.
@@ -208,7 +223,6 @@ static void OnRenderEvent(int eventID)
 	//we just need to make sure we do actually delete the other buffer as well:
 	delete[] textureDataPtr;
 }
-
 
 extern "C" UnityRenderingEvent UNITY_INTERFACE_EXPORT UNITY_INTERFACE_API GetRenderEventFunc()
 {

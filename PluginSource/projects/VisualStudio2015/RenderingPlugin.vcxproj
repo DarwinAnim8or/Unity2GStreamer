@@ -19,8 +19,10 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\..\source\CCTVServer.h" />
     <ClInclude Include="..\..\source\gl3w\gl3w.h" />
     <ClInclude Include="..\..\source\gl3w\glcorearb.h" />
+    <ClInclude Include="..\..\source\gstRtsp.h" />
     <ClInclude Include="..\..\source\PlatformBase.h" />
     <ClInclude Include="..\..\source\RenderAPI.h" />
     <ClInclude Include="..\..\source\Unity\IUnityGraphics.h" />
@@ -31,7 +33,9 @@
     <ClInclude Include="..\..\source\Unity\IUnityInterface.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\source\CCTVServer.cpp" />
     <ClCompile Include="..\..\source\gl3w\gl3w.c" />
+    <ClCompile Include="..\..\source\gstRtsp.cpp" />
     <ClCompile Include="..\..\source\RenderAPI.cpp" />
     <ClCompile Include="..\..\source\RenderAPI_D3D11.cpp" />
     <ClCompile Include="..\..\source\RenderAPI_D3D12.cpp" />
@@ -132,14 +136,15 @@
       <PrecompiledHeader />
       <WarningLevel>Level3</WarningLevel>
       <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
-      <AdditionalIncludeDirectories>../../</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../../;;../../../3rdparty/RakNet/Sources/</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>opengl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>RakNetLibStatic.lib;ws2_32.lib;opengl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Windows</SubSystem>
       <TargetMachine>MachineX86</TargetMachine>
       <ModuleDefinitionFile>../../source/RenderingPlugin.def</ModuleDefinitionFile>
+      <AdditionalLibraryDirectories>;../../../3rdparty/RakNet/Sources/Lib/</AdditionalLibraryDirectories>
     </Link>
     <PostBuildEvent>
       <Command>SETLOCAL
@@ -166,13 +171,15 @@ ENDLOCAL
       </PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
-      <AdditionalIncludeDirectories>../../</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../../;%GSTREAMER_ROOT_X86%/include/gstreamer-1.0/;%GSTREAMER_ROOT_X86%/include/glib-2.0/;%GSTREAMER_ROOT_X86%/lib\glib-2.0\include;../../../3rdparty/RakNet/Sources/</AdditionalIncludeDirectories>
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>opengl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>RakNetLibStatic.lib;ws2_32.lib;opengl32.lib;gstreamer-1.0.lib;glib-2.0.lib;gstbase-1.0.lib;gobject-2.0.lib;gstapp-1.0.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Windows</SubSystem>
       <ModuleDefinitionFile>../../source/RenderingPlugin.def</ModuleDefinitionFile>
+      <AdditionalLibraryDirectories>D:\gstreamer\1.0\msvc_x86_64\lib;%(AdditionalLibraryDirectories);C:\Users\Stage\Documents\GitHub\Unity2GStreamer\3rdparty\RakNet\Lib</AdditionalLibraryDirectories>
     </Link>
     <PostBuildEvent>
       <Command>SETLOCAL
@@ -199,16 +206,17 @@ ENDLOCAL
       <PrecompiledHeader />
       <WarningLevel>Level3</WarningLevel>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
-      <AdditionalIncludeDirectories>../../</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../../;;../../../3rdparty/RakNet/Sources/</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>opengl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>RakNetLibStatic.lib;ws2_32.lib;opengl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Windows</SubSystem>
       <OptimizeReferences>true</OptimizeReferences>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <TargetMachine>MachineX86</TargetMachine>
       <ModuleDefinitionFile>../../source/RenderingPlugin.def</ModuleDefinitionFile>
+      <AdditionalLibraryDirectories>;../../../3rdparty/RakNet/Sources/Lib/</AdditionalLibraryDirectories>
     </Link>
     <PostBuildEvent>
       <Command>SETLOCAL
@@ -236,15 +244,17 @@ ENDLOCAL
       </PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
-      <AdditionalIncludeDirectories>../../</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../../;%GSTREAMER_ROOT_X86%/include/gstreamer-1.0/;%GSTREAMER_ROOT_X86%/include/glib-2.0/;%GSTREAMER_ROOT_X86%/lib\glib-2.0\include;C:\Users\Stage\Documents\GitHub\Unity2GStreamer\3rdparty\RakNet\Source</AdditionalIncludeDirectories>
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>opengl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>RakNetLibStatic.lib;ws2_32.lib;opengl32.lib;gstreamer-1.0.lib;glib-2.0.lib;gstbase-1.0.lib;gobject-2.0.lib;gstapp-1.0.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Windows</SubSystem>
       <OptimizeReferences>true</OptimizeReferences>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <ModuleDefinitionFile>../../source/RenderingPlugin.def</ModuleDefinitionFile>
+      <AdditionalLibraryDirectories>D:\gstreamer\1.0\msvc_x86_64\lib;%(AdditionalLibraryDirectories);C:\Users\Stage\Documents\GitHub\Unity2GStreamer\3rdparty\RakNet\Lib</AdditionalLibraryDirectories>
     </Link>
     <PostBuildEvent>
       <Command>SETLOCAL

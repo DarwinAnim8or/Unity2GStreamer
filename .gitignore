@@ -15,7 +15,10 @@ UnityProject/Library
 UnityProject/Temp
 UnityProject/UWP
 UnityProject/Logs
+UnityProject/Builds
 
 PluginSource/build
 PluginSource/projects/Android/libs/*
 PluginSource/projects/Android/obj/*
+
+U2G_Client/x64
