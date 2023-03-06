@@ -217,6 +217,8 @@ static void OnRenderEvent(int eventID)
 	//TODO: Call a function here to pass our texture data into gstreamer!
 	//start_rtsp_stream(pData, g_TextureWidth, g_TextureHeight);
 
+	g_Server->SendNewFrameToEveryone(pData, uiSize);
+
 	delete[] pData;
 	//we don't need to call the currentAPI again, because it's not "waiting" for us to.
 	//EndModifyTexture actually just *applies* our transformed texture back to Unity, which we dont need to do.

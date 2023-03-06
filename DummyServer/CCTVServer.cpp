@@ -125,7 +125,9 @@ void CCTVServer::SendNewFrameToRemoteGstreamer(RakNetGUID client, const char* by
 void CCTVServer::SendStreamSettings(const StreamSettings& settings) {
 	RakNet::BitStream bs;
 	bs.Write((MessageID)Messages::ID_STREAM_SETTINGS);
-	bs.Write(settings);
+	bs.Write(settings.port);
+	bs.Write(settings.codec);
+	bs.Write(settings.useHardwareEncoder);
 	m_Peer->Send(&bs, PacketPriority::HIGH_PRIORITY, PacketReliability::RELIABLE_ORDERED, 0, RakNet::UNASSIGNED_RAKNET_GUID, true);
 }
 
