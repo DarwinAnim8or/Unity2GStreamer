@@ -2,9 +2,9 @@
 The goal of this plugin is to create a RenderTexture for Unity to use, then render camera(s) to it. 
 Once the frame is completed, we will take the generated texture and pass it as a frame to gstreamer, which will then in turn encode it and generate an RTSP stream from it.
 
-## Possible Networked Expansion
-The plan is to expand this plugin with the capability to send it's generated images to a small server that then passes the texture to gstreamer instead. 
-The reason for this is that it'd be great to seperate out your Unity instance, and your encoding hardware, so that the Unity instance can use all it's power to render out frames and not encode video signals. 
+## Cloning
+If you clone this repository and git didn't clone the submodules, you need to run the following command:
+```git submodule update --init --recursive```
 
 ## Software Versions
 * Unity: 2021.3.15 LTS
