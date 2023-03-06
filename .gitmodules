@@ -1,3 +1,3 @@
-[submodule "3rdparty/RakNet"]
-	path = 3rdparty/RakNet
+[submodule "thirdparty/RakNet"]
+	path = thirdparty/RakNet
 	url = https://github.com/LBBStudios/RakNet
