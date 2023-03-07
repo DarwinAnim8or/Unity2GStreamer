@@ -171,15 +171,15 @@ ENDLOCAL
       </PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
-      <AdditionalIncludeDirectories>../../;%GSTREAMER_ROOT_X86%/include/gstreamer-1.0/;%GSTREAMER_ROOT_X86%/include/glib-2.0/;%GSTREAMER_ROOT_X86%/lib\glib-2.0\include;../../../3rdparty/RakNet/Sources/</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../../;../../../3rdparty/RakNet/Source/;%GSTREAMER_ROOT_X86%/include/gstreamer-1.0/;%GSTREAMER_ROOT_X86%/include/glib-2.0/;%GSTREAMER_ROOT_X86%/lib\glib-2.0\include;../../../3rdparty/RakNet/Sources/</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>RakNetLibStatic.lib;ws2_32.lib;opengl32.lib;gstreamer-1.0.lib;glib-2.0.lib;gstbase-1.0.lib;gobject-2.0.lib;gstapp-1.0.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>RakNetLibStaticd.lib;big_x64.lib;ws2_32.lib;opengl32.lib;gstreamer-1.0.lib;glib-2.0.lib;gstbase-1.0.lib;gobject-2.0.lib;gstapp-1.0.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Windows</SubSystem>
       <ModuleDefinitionFile>../../source/RenderingPlugin.def</ModuleDefinitionFile>
-      <AdditionalLibraryDirectories>D:\gstreamer\1.0\msvc_x86_64\lib;%(AdditionalLibraryDirectories);C:\Users\Stage\Documents\GitHub\Unity2GStreamer\3rdparty\RakNet\Lib</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>D:\gstreamer\1.0\msvc_x86_64\lib;%(AdditionalLibraryDirectories);../../../3rdparty/RakNet/build/Lib/LibStatic/Debug/;../../../3rdparty/RakNet/DependentExtensions/cat/lib/cat/</AdditionalLibraryDirectories>
     </Link>
     <PostBuildEvent>
       <Command>SETLOCAL
@@ -244,17 +244,17 @@ ENDLOCAL
       </PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
-      <AdditionalIncludeDirectories>../../;%GSTREAMER_ROOT_X86%/include/gstreamer-1.0/;%GSTREAMER_ROOT_X86%/include/glib-2.0/;%GSTREAMER_ROOT_X86%/lib\glib-2.0\include;C:\Users\Stage\Documents\GitHub\Unity2GStreamer\3rdparty\RakNet\Source</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../../;../../../3rdparty/RakNet/Source/;%GSTREAMER_ROOT_X86%/include/gstreamer-1.0/;%GSTREAMER_ROOT_X86%/include/glib-2.0/;%GSTREAMER_ROOT_X86%/lib\glib-2.0\include;C:\Users\Stage\Documents\GitHub\Unity2GStreamer\3rdparty\RakNet\Source</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>RakNetLibStatic.lib;ws2_32.lib;opengl32.lib;gstreamer-1.0.lib;glib-2.0.lib;gstbase-1.0.lib;gobject-2.0.lib;gstapp-1.0.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>RakNetLibStatic.lib;big_x64.lib;ws2_32.lib;opengl32.lib;gstreamer-1.0.lib;glib-2.0.lib;gstbase-1.0.lib;gobject-2.0.lib;gstapp-1.0.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Windows</SubSystem>
       <OptimizeReferences>true</OptimizeReferences>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <ModuleDefinitionFile>../../source/RenderingPlugin.def</ModuleDefinitionFile>
-      <AdditionalLibraryDirectories>D:\gstreamer\1.0\msvc_x86_64\lib;%(AdditionalLibraryDirectories);C:\Users\Stage\Documents\GitHub\Unity2GStreamer\3rdparty\RakNet\Lib</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>D:\gstreamer\1.0\msvc_x86_64\lib;%(AdditionalLibraryDirectories);../../../3rdparty/RakNet/build/Lib/LibStatic/Release/;../../../3rdparty/RakNet/DependentExtensions/cat/lib/cat/</AdditionalLibraryDirectories>
     </Link>
     <PostBuildEvent>
       <Command>SETLOCAL
