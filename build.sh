@@ -7,6 +7,7 @@ make -j2
 cd ..
 cd ..
 cd ..
+echo "Built RakNet"
 #Compile DummyServer
 cd DummyServer
 mkdir build
@@ -15,4 +16,13 @@ cmake ..
 make
 cd ..
 cd ..
+echo "Built DummyServer"
 #Compile client
+cd U2G_Client
+mkdir build
+cd build
+cmake ..
+make
+cd ..
+cd ..
+echo "Client has been built!"
