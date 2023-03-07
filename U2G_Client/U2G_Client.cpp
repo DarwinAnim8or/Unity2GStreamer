@@ -67,7 +67,7 @@ void InitializeGStreamer(StreamSettings settings) {
 	gst_app_src_set_max_bytes(GST_APP_SRC(appsrc), 0);
 
 	// Create an H.264 encoder element:
-	GstElement* x264enc = gst_element_factory_make("open264enc", "open264enc");
+	GstElement* x264enc = gst_element_factory_make("x264enc", "x264enc");
 	GstElement* rtph264pay = gst_element_factory_make("rtph264pay", "rtph264pay");
 	GstElement* udpsink = gst_element_factory_make("udpsink", "udpsink");
 
