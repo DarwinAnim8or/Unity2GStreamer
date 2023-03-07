@@ -1,11 +1,5 @@
 #This script will CLEAN RakNet, DummyServer and the Streaming client.
-cd 3rdparty/RakNet
-rm -rf build
-cd ..
-cd ..
-#Clean DummyServer
-cd DummyServer
-rm -rf build
-cd ..
-cd ..
-#Clean client
+rm -rf 3rdparty/RakNet/build
+rm -rf DummyServer/build
+rm -rf U2G_Client/build
+echo "Cleaned!"
