@@ -109,14 +109,26 @@ void ShutdownGStreamer() {
 	gst_object_unref(pipeline);
 }
 
-int main(void) {
+int main(int argc, char** argv) {
 	RakPeerInterface* peer = RakPeerInterface::GetInstance();
 	Packet* packet;
 	SocketDescriptor socket;
 	peer->Startup(1, &socket, 1);
 
+	//Set up our defaults:
+	std::string ip = "127.0.0.1";
+	int port = 3001;
+
+	//Check if we have command line arguments:
+	if (argc == 3) {
+		ip = argv[1];
+		port = std::atoi(argv[2]);
+	}
+
+	std::cout << "Opening connection to: " << ip << ":" << port << std::endl;
+
 	//Connect to the server:
-	peer->Connect("127.0.0.1", 3001, "U2GPass", 7); //TODO: make ip & port read from a configuration file. 
+	peer->Connect(ip.c_str(), port, "U2GPass", 7); //TODO: make ip & port read from a configuration file as well.
 
 	//To store the server's details:
 	RakNetGUID serverGUID;
