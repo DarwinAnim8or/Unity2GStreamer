@@ -29,3 +29,15 @@ DummyServer/x64/*
 *.obj
 *.pdb
 *.ipdb
+DummyServer/x64/Release/vc143.pdb
+DummyServer/x64/Release/main.obj
+DummyServer/x64/Release/DummyServer.tlog/link.write.1.tlog
+DummyServer/x64/Release/DummyServer.tlog/link.read.1.tlog
+DummyServer/x64/Release/DummyServer.tlog/link.command.1.tlog
+DummyServer/x64/Release/DummyServer.tlog/CL.write.1.tlog
+DummyServer/x64/Release/DummyServer.tlog/CL.read.1.tlog
+DummyServer/x64/Release/DummyServer.tlog/CL.command.1.tlog
+DummyServer/x64/Release/DummyServer.log
+DummyServer/x64/Release/DummyServer.ipdb
+DummyServer/x64/Release/DummyServer.iobj
+DummyServer/x64/Release/CCTVServer.obj
