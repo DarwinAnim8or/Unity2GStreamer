@@ -99,7 +99,7 @@ void CCTVServer::SendHandshakeResponse(bool success, RakNetGUID& clientGUID) {
 void CCTVServer::SendNewFrameToEveryone(unsigned char* bytes, size_t size) {
 	BitStream bitStream;
 	bitStream.Write((MessageID)Messages::ID_IMAGE_DATA);
-	bitStream.Write<unsigned int>(size);
+	bitStream.Write<unsigned int>((unsigned int)size);
 
 	for (size_t i = 0; i < size; i++) {
 		bitStream.Write(bytes[i]);
@@ -111,7 +111,7 @@ void CCTVServer::SendNewFrameToEveryone(unsigned char* bytes, size_t size) {
 void CCTVServer::SendNewFrameToRemoteGstreamer(RakNetGUID client, const char* bytes, size_t size) {
 	BitStream bitStream;
 	bitStream.Write((MessageID)Messages::ID_IMAGE_DATA);
-	bitStream.Write<unsigned int>(size);
+	bitStream.Write<unsigned int>((unsigned int)size);
 
 	for (size_t i = 0; i < size; i++) {
 		bitStream.Write(bytes[i]);

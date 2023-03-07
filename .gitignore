@@ -21,5 +21,11 @@ PluginSource/build
 PluginSource/projects/Android/libs/*
 PluginSource/projects/Android/obj/*
 
-U2G_Client/x64
-x64/
+U2G_Client/x64/*
+x64/*
+DummyServer/x64/*
+
+*.tlog
+*.obj
+*.pdb
+*.ipdb
