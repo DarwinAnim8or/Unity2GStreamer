@@ -3,7 +3,6 @@
 // - JPEG packetizer and UDP/TCP based streaming
 
 #include "CStreamer.h"
-//#include "JPEGSamples.h"
 
 #include <stdio.h>
 #include <fstream>
