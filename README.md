@@ -11,6 +11,8 @@ If you clone this repository and git didn't clone the submodules, you need to ru
 ```git submodule update --init --recursive```
 
 ## Building The Client (Encoding) side
+You can download [the required version from libjpeg-turbo here](https://sourceforge.net/projects/libjpeg-turbo/files/2.1.5.1/)
+
 The client is only confirmed to work on Linux. A Visual Studio project is included, but your milage may vary.
 For Linux, the recommended setup, run the following scripts in order:
 * linux_installdeps.sh
@@ -52,7 +54,7 @@ Per info: libcat is the library RakNet uses for providing TLS-like encryption to
 ## Software Versions
 * Unity: 2021.3.15 LTS
 * Visual Studio: 2022 Community
-* Gstreamer: 1.22.0 
+* libjpeg-turbo: 2.1.5.1
 
 ## Attribution
 This is based off the [template](https://github.com/Unity-Technologies/NativeRenderingPlugin) provided by Unity Technologies themselves.
