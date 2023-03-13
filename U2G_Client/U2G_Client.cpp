@@ -132,7 +132,6 @@ int main(int argc, char** argv) {
 
 	//To store the server's details:
 	RakNetGUID serverGUID;
-
 	StreamSettings sSettings;
 
 	//Our main networking loop
