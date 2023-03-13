@@ -12,6 +12,20 @@
 #include "CStreamer.h"
 #include "CRtspSession.h"
 
+//RakNet includes:
+#include "RakPeerInterface.h"
+#include "MessageIdentifiers.h"
+#include "BitStream.h"
+#include "RakNetTypes.h"
+
+//Custom includes:
+#include "NetworkDefines.h"
+#include "StreamDataManager.h"
+
+using namespace RakNet;
+
+StreamDataManager sm();
+
 DWORD WINAPI SessionThreadHandler(LPVOID lpParam)
 {
     SOCKET Client = *(SOCKET*)lpParam;
@@ -74,8 +88,7 @@ DWORD WINAPI SessionThreadHandler(LPVOID lpParam)
     return 0;
 };
 
-int main()  
-{    
+int main(int argc, char** argv) {    
     SOCKET      MasterSocket;                                 // our masterSocket(socket that listens for RTSP client connections)  
     SOCKET      ClientSocket;                                 // RTSP socket to handle an client
     sockaddr_in ServerAddr;                                   // server address parameters
@@ -96,15 +109,141 @@ int main()
     if (bind(MasterSocket,(sockaddr*)&ServerAddr,sizeof(ServerAddr)) != 0) return 0;  
     if (listen(MasterSocket,5) != 0) return 0;
 
-    while (true)  
-    {   // loop forever to accept client connections
+    //RakNet variables:
+    RakPeerInterface* peer = RakPeerInterface::GetInstance();
+    Packet* packet;
+    SocketDescriptor socket;
+    peer->Startup(1, &socket, 1);
+
+    //Set up our defaults:
+    std::string ip = "127.0.0.1";
+    int port = 3001;
+
+    //Check if we have command line arguments:
+    if (argc == 3) {
+        ip = argv[1];
+        port = std::atoi(argv[2]);
+    }
+
+    std::cout << "Opening connection to: " << ip << ":" << port << std::endl;
+
+    //Connect to the server:
+    peer->Connect(ip.c_str(), port, "U2GPass", 7); //TODO: make ip & port read from a configuration file as well.
+
+    //To store the server's details:
+    RakNetGUID serverGUID;
+    StreamSettings sSettings;
+
+    bool run = true;
+    while (run) {
         ClientSocket = accept(MasterSocket,(struct sockaddr*)&ClientAddr,&ClientAddrLen);    
         CreateThread(NULL,0,SessionThreadHandler,&ClientSocket,0,&TID);
-        printf("Client connected. Client address: %s\r\n",inet_ntoa(ClientAddr.sin_addr));  
+        printf("Client connected. Client address: %s\r\n",inet_ntoa(ClientAddr.sin_addr)); 
+
+        //Check for packets from RakNet:
+        for (packet = peer->Receive(); packet; peer->DeallocatePacket(packet), packet = peer->Receive()) {
+            switch ((MessageID)packet->data[0]) {
+            case ID_DISCONNECTION_NOTIFICATION:
+            case ID_CONNECTION_LOST:
+                std::cout << "Disconnected." << std::endl;
+                run = false;
+                break;
+
+            case ID_CONNECTION_REQUEST_ACCEPTED:
+            {
+                std::cout << "Our connection request has been accepted. Sending handshake..." << std::endl;
+                serverGUID = packet->guid;
+                RakNet::BitStream bs;
+                bs.Write((MessageID)Messages::ID_HANDSHAKE);
+                bs.Write<int>(NET_VERSION);
+                peer->Send(&bs, PacketPriority::HIGH_PRIORITY, PacketReliability::RELIABLE_ORDERED, 0, serverGUID, false);
+                break;
+            }
+
+            case (int)Messages::ID_HANDSHAKE_RESPONSE:
+            {
+                RakNet::BitStream is(packet->data, packet->length, false);
+                MessageID msgID;
+                bool isOk = false;
+                is.Read(msgID);
+                is.Read(isOk);
+
+                std::cout << "Handshake accepted: " << (int)isOk << std::endl;
+                if (!isOk) run = false;
+                else std::cout << "Awaiting streaming settings." << std::endl;
+                break;
+            }
+
+            case (int)Messages::ID_STREAM_SETTINGS:
+            {
+                RakNet::BitStream is(packet->data, packet->length, false);
+                MessageID msgID;
+                is.Read(msgID);
+                is.Read(sSettings.port);
+                is.Read(sSettings.codec);
+                is.Read(sSettings.useHardwareEncoder);
+
+                std::cout << "Stream settings received. Port: " << sSettings.port << ", Codec: " << sSettings.codec.C_String() << ", Use hardware encoder: " << sSettings.useHardwareEncoder << std::endl;
+
+                //TODO: change our settings based on what we just received
+                StreamDataManager::Instance().AddStream(1);
+
+                break;
+            }
+
+            case (int)Messages::ID_IMAGE_DATA:
+            {
+                RakNet::BitStream is(packet->data, packet->length, false);
+                MessageID msgID;
+                unsigned int size;
+                unsigned char* data;
+
+                is.Read(msgID);
+                is.Read(size);
+                data = new unsigned char[size];
+
+                for (unsigned int i = 0; i < size; i++) {
+                    unsigned char temp;
+                    is.Read(temp);
+                    if (temp != 0x00) std::cout << "not 0" << std::endl;
+                    data[i] = temp;
+                }
+
+                StreamData newData;
+                newData.data = data;
+                newData.size = size;
+
+                StreamDataManager::Instance().SetDataForStream(1, newData);
+
+                break;
+            }
+
+            case ID_NO_FREE_INCOMING_CONNECTIONS:
+                std::cout << "Server has no more free slots for us to connect to." << std::endl;
+                run = false;
+                break;
+
+            case ID_CONNECTION_ATTEMPT_FAILED:
+                std::cout << "Connection timed out." << std::endl;
+                run = false;
+                break;
+
+            default:
+                std::cout << "Message with ID: " << int(packet->data[0]) << " has arrived." << std::endl;
+            }
+        }
     }  
+
+    //Clean up:
+    StreamDataManager::Instance().Cleanup();
+    RakNet::RakPeerInterface::DestroyInstance(peer);
 
     closesocket(MasterSocket);   
     WSACleanup();   
 
     return 0;  
-} 
+}
+
+StreamDataManager sm() {
+    return StreamDataManager();
+}

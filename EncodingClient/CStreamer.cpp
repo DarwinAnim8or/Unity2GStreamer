@@ -10,6 +10,7 @@
 #include "math.h"
 #include "turbojpeg.h"
 
+#include "StreamDataManager.h"
 #include "JpegFrameParser.h"
 
 CStreamer::CStreamer(SOCKET aClient, bool useTCP = false) :
@@ -367,7 +368,10 @@ RGBAImage GenerateRandomRGBAImage(int width, int height) {
 void CStreamer::StreamImage(int StreamID)
 {
     //Get a random RGBA Image:
-    RGBAImage image = GenerateRandomRGBAImage(1280, 720);
+    //RGBAImage image = GenerateRandomRGBAImage(1280, 720);
+
+    //Fetch our image from the SD Manager:
+    StreamData image = *StreamDataManager::Instance().GetDataForStream(StreamID);
 
     //Use libjpeg-turbo to encode this as a JPEG image:
     unsigned char* compressedImage = NULL;
