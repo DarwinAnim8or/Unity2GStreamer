@@ -41,3 +41,6 @@ DummyServer/x64/Release/DummyServer.log
 DummyServer/x64/Release/DummyServer.ipdb
 DummyServer/x64/Release/DummyServer.iobj
 DummyServer/x64/Release/CCTVServer.obj
+
+EncodingClient/x64/*
+*.suo
