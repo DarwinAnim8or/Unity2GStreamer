@@ -26,7 +26,7 @@ struct StreamSettings {
 using namespace RakNet;
 
 struct RGBAImage {
-	std::string data = "";
+	unsigned char* data = nullptr;
 	unsigned int size = 0;
 };
 
@@ -38,7 +38,7 @@ public:
 	void Update(); //updates our rakPeer and checks for new messages from clients
 
 	void SendHandshakeResponse(bool success, RakNetGUID& clientGUID);
-	void SendNewFrameToEveryone(const char* bytes, size_t size);
+	void SendNewFrameToEveryone(unsigned char* bytes, size_t size, int width, int height);
 	void SendNewFrameToRemoteGstreamer(RakNetGUID client, const char* bytes, size_t size);
 	void SendStreamSettings(const StreamSettings& settings);
 	void Disconnect(RakNetGUID client);

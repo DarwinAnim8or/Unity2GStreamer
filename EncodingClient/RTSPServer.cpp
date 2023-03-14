@@ -172,6 +172,8 @@ void RakNetLoop() {
                 std::cout << "img data wee" << std::endl;
                 RakNet::BitStream is(packet->data, packet->length, false);
                 MessageID msgID;
+                unsigned int width;
+                unsigned int height;
                 unsigned int size;
                 unsigned char* data;
 

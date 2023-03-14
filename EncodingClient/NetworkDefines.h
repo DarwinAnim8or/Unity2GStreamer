@@ -3,7 +3,7 @@
 #include "MessageIdentifiers.h"
 #include "RakString.h"
 
-#define NET_VERSION 2
+#define NET_VERSION 3
 
 enum class Messages : unsigned int {
 	ID_STREAM_SETTINGS = ID_USER_PACKET_ENUM + 1, //this tells us what port to initialize our RTSP stream on. 

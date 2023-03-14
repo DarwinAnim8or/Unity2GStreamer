@@ -1,7 +1,7 @@
 #include "CCTVServer.h"
 
 //IMPORTANT: This should stay in sync with the client project. Increment the netversion if you make changes to this enum or the serialization of packets.
-int NET_VERSION = 2;
+int NET_VERSION = 3;
 
 CCTVServer::CCTVServer(int port) {
 	m_Port = port;
@@ -96,9 +96,11 @@ void CCTVServer::SendHandshakeResponse(bool success, RakNetGUID& clientGUID) {
 	m_Peer->Send(&bs, PacketPriority::IMMEDIATE_PRIORITY, PacketReliability::RELIABLE_ORDERED, 0, clientGUID, false);
 }
 
-void CCTVServer::SendNewFrameToEveryone(const char* bytes, size_t size) {
+void CCTVServer::SendNewFrameToEveryone(unsigned char* bytes, size_t size, int width, int height) {
 	BitStream bitStream;
 	bitStream.Write((MessageID)Messages::ID_IMAGE_DATA);
+	bitStream.Write<unsigned int>(width);
+	bitStream.Write<unsigned int>(height);
 	bitStream.Write<unsigned int>((unsigned int)size);
 
 	for (size_t i = 0; i < size; i++) {
@@ -147,7 +149,8 @@ RGBAImage CCTVServer::GenerateRandomRGBAImage(int width, int height) {
 	//Create the new image:
 	RGBAImage toReturn;
 	toReturn.size = width * height * 4;
-	toReturn.data.resize(toReturn.size);
+	//toReturn.data.resize(toReturn.size);
+	toReturn.data = new unsigned char[toReturn.size];
 
 	//Generate our image:
 	int pos = 0;
