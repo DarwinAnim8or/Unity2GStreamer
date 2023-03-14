@@ -35,7 +35,7 @@ public class UseRenderingPlugin : MonoBehaviour
 
 	private void CreateTextureAndPassToPlugin() {
 		Camera m_MainCamera = Camera.main;
-		m_MainCamera.pixelRect = new Rect(0, 0, 512, 512);
+		m_MainCamera.pixelRect = new Rect(0, 0, m_MainCamera.pixelWidth, m_MainCamera.pixelHeight);
 
 		//create a new render texture based on the size of the main camera:
 		RenderTexture m_RenderTexture = new RenderTexture(m_MainCamera.pixelWidth, m_MainCamera.pixelHeight, 24, RenderTextureFormat.ARGB32);
@@ -46,6 +46,12 @@ public class UseRenderingPlugin : MonoBehaviour
 		//tell our plugin where the texture is, so it can load it when we're done rendering:
 		SetTextureFromUnity(m_RenderTexture.GetNativeTexturePtr(), m_RenderTexture.width, m_RenderTexture.height);
 		Debug.Log("Setting texture from Unity");
+
+		m_MainCamera.enabled = false; //disable the camera
+	}
+
+	void Update() {
+		GetComponent<Camera>().Render(); //render the camera
 	}
 
 	private IEnumerator CallPluginAtEndOfFrames() {
