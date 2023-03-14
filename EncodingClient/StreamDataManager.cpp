@@ -23,6 +23,7 @@ void StreamDataManager::StopStream(unsigned int id) {
 
 void StreamDataManager::SetDataForStream(unsigned int id, StreamData data) {
     if (data.data == nullptr) return;
+    if (globalDataBcFuckIt.data) delete[] globalDataBcFuckIt.data;
     globalDataBcFuckIt = data;
     
     std::cout << data.data[0] << std::endl;

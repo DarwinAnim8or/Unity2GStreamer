@@ -394,7 +394,7 @@ void CStreamer::StreamImage(int StreamID)
     unsigned char* compressedImage = NULL;
     unsigned long compressedImageSize;
     tjhandle jpegCompressor = tjInitCompress();
-    tjCompress2(jpegCompressor, image.data, 1280, 0, 720, TJPF_RGBA, &compressedImage, &compressedImageSize, TJSAMP_420, 75, TJFLAG_FASTDCT);
+    tjCompress2(jpegCompressor, image.data, image.width, 0, image.height, TJPF_RGBA, &compressedImage, &compressedImageSize, TJSAMP_420, 75, TJFLAG_FASTDCT);
     tjDestroy(jpegCompressor);
 
     if (compressedImage == nullptr) return;
@@ -436,7 +436,7 @@ void CStreamer::StreamImage(int StreamID)
             isLastPacket = true;
         }
 
-        SendRtpJpegPacket(scanData + sentLength, length, 1280 / 8, 720 / 8, tables, tablesLength, sentLength, isLastPacket, StreamID);
+        SendRtpJpegPacket(scanData + sentLength, length, image.width / 8, image.height / 8, tables, tablesLength, sentLength, isLastPacket, StreamID);
         sentLength += length;
     }
 

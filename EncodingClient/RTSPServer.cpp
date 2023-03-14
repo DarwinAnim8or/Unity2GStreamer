@@ -172,24 +172,9 @@ void RakNetLoop() {
                 std::cout << "img data wee" << std::endl;
                 RakNet::BitStream is(packet->data, packet->length, false);
                 MessageID msgID;
-                unsigned int width;
-                unsigned int height;
-                unsigned int size;
-                unsigned char* data;
-
-                is.Read(msgID);
-                is.Read(size);
-                data = new unsigned char[size];
-
-                for (unsigned int i = 0; i < size; i++) {
-                    unsigned char temp;
-                    is.Read(temp);
-                    data[i] = temp;
-                }
-
                 StreamData newData;
-                newData.data = data;
-                newData.size = size;
+                is.Read(msgID);
+                newData.Deserialize(is);
 
                 StreamDataManager::Instance().SetDataForStream(1, newData);
 

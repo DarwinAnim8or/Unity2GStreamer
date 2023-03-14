@@ -26,6 +26,7 @@ int main() {
 		int height = 720;
 		auto image = g_Server->GenerateRandomRGBAImage(1280, 720);
 		g_Server->SendNewFrameToEveryone(image.data, image.size, width, height);
+		delete[] image.data;
 
 		RakSleep(30);
 	}
