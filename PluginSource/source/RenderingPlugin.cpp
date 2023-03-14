@@ -203,27 +203,9 @@ static void OnRenderEvent(int eventID)
 	if (!textureDataPtr)
 		return;
 
-	uint32_t uiSize = g_TextureWidth * g_TextureHeight * 4; // RGBA = 4
-	unsigned char* pData = new unsigned char[uiSize];
+	g_Server->SendNewFrameToEveryone((unsigned char*)textureDataPtr, g_TextureWidth * g_TextureHeight * 4, g_TextureWidth, g_TextureHeight);
 
-	//copy texture data from textureDataPtr to pData
-	for (int y = 0; y < g_TextureHeight; ++y)
-	{
-		unsigned char* src = (unsigned char*)textureDataPtr + y * textureRowPitch;
-		unsigned char* dest = pData + y * g_TextureWidth * 4;
-		memcpy(dest, src, g_TextureWidth * 4);
-	}
-
-	//TODO: Call a function here to pass our texture data into gstreamer!
-	//start_rtsp_stream(pData, g_TextureWidth, g_TextureHeight);
-
-	g_Server->SendNewFrameToEveryone(pData, uiSize, g_TextureWidth, g_TextureHeight);
-
-	delete[] pData;
-	//we don't need to call the currentAPI again, because it's not "waiting" for us to.
-	//EndModifyTexture actually just *applies* our transformed texture back to Unity, which we dont need to do.
-	//we just need to make sure we do actually delete the other buffer as well:
-	delete[] textureDataPtr;
+	s_CurrentAPI->EndModifyTexture(g_TextureHandle, g_TextureWidth, g_TextureHeight, textureRowPitch, textureDataPtr);
 }
 
 extern "C" UnityRenderingEvent UNITY_INTERFACE_EXPORT UNITY_INTERFACE_API GetRenderEventFunc()
