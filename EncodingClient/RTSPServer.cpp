@@ -5,6 +5,9 @@
 
 #include "stdafx.h"
 
+#include <thread>
+#include <future>
+
 #include <Winsock2.h>
 #include <windows.h>  
 #pragma comment(lib, "Ws2_32.lib")
@@ -25,6 +28,7 @@
 using namespace RakNet;
 
 StreamDataManager sm();
+bool shouldTransmitRTSP = false;
 
 DWORD WINAPI SessionThreadHandler(LPVOID lpParam)
 {
@@ -88,27 +92,7 @@ DWORD WINAPI SessionThreadHandler(LPVOID lpParam)
     return 0;
 };
 
-int main(int argc, char** argv) {    
-    SOCKET      MasterSocket;                                 // our masterSocket(socket that listens for RTSP client connections)  
-    SOCKET      ClientSocket;                                 // RTSP socket to handle an client
-    sockaddr_in ServerAddr;                                   // server address parameters
-    sockaddr_in ClientAddr;                                   // address parameters of a new RTSP client
-    int         ClientAddrLen = sizeof(ClientAddr);   
-    WSADATA     WsaData;  
-    DWORD       TID;
-
-    int ret = WSAStartup(0x101,&WsaData); 
-    if (ret != 0) return 0;  
-
-    ServerAddr.sin_family      = AF_INET;   
-    ServerAddr.sin_addr.s_addr = INADDR_ANY;   
-    ServerAddr.sin_port        = htons(8554);                 // listen on RTSP port 8554
-    MasterSocket               = socket(AF_INET,SOCK_STREAM,0);   
-
-    // bind our master socket to the RTSP port and listen for a client connection
-    if (bind(MasterSocket,(sockaddr*)&ServerAddr,sizeof(ServerAddr)) != 0) return 0;  
-    if (listen(MasterSocket,5) != 0) return 0;
-
+void RakNetLoop() {
     //RakNet variables:
     RakPeerInterface* peer = RakPeerInterface::GetInstance();
     Packet* packet;
@@ -118,12 +102,6 @@ int main(int argc, char** argv) {
     //Set up our defaults:
     std::string ip = "127.0.0.1";
     int port = 3001;
-
-    //Check if we have command line arguments:
-    if (argc == 3) {
-        ip = argv[1];
-        port = std::atoi(argv[2]);
-    }
 
     std::cout << "Opening connection to: " << ip << ":" << port << std::endl;
 
@@ -136,12 +114,9 @@ int main(int argc, char** argv) {
 
     bool run = true;
     while (run) {
-        ClientSocket = accept(MasterSocket,(struct sockaddr*)&ClientAddr,&ClientAddrLen);    
-        CreateThread(NULL,0,SessionThreadHandler,&ClientSocket,0,&TID);
-        printf("Client connected. Client address: %s\r\n",inet_ntoa(ClientAddr.sin_addr)); 
-
-        //Check for packets from RakNet:
-        for (packet = peer->Receive(); packet; peer->DeallocatePacket(packet), packet = peer->Receive()) {
+        //Check for packets from RakNet :
+        packet = peer->Receive();
+        if (packet) {
             switch ((MessageID)packet->data[0]) {
             case ID_DISCONNECTION_NOTIFICATION:
             case ID_CONNECTION_LOST:
@@ -187,12 +162,14 @@ int main(int argc, char** argv) {
 
                 //TODO: change our settings based on what we just received
                 StreamDataManager::Instance().AddStream(1);
+                shouldTransmitRTSP = true;
 
                 break;
             }
 
             case (int)Messages::ID_IMAGE_DATA:
             {
+                std::cout << "img data wee" << std::endl;
                 RakNet::BitStream is(packet->data, packet->length, false);
                 MessageID msgID;
                 unsigned int size;
@@ -205,7 +182,6 @@ int main(int argc, char** argv) {
                 for (unsigned int i = 0; i < size; i++) {
                     unsigned char temp;
                     is.Read(temp);
-                    if (temp != 0x00) std::cout << "not 0" << std::endl;
                     data[i] = temp;
                 }
 
@@ -232,18 +208,52 @@ int main(int argc, char** argv) {
                 std::cout << "Message with ID: " << int(packet->data[0]) << " has arrived." << std::endl;
             }
         }
+
+        peer->DeallocatePacket(packet);
+    }
+
+    RakPeerInterface::DestroyInstance(peer);
+}
+
+int main(int argc, char** argv) {    
+    SOCKET      MasterSocket;                                 // our masterSocket(socket that listens for RTSP client connections)  
+    SOCKET      ClientSocket;                                 // RTSP socket to handle an client
+    sockaddr_in ServerAddr;                                   // server address parameters
+    sockaddr_in ClientAddr;                                   // address parameters of a new RTSP client
+    int         ClientAddrLen = sizeof(ClientAddr);   
+    WSADATA     WsaData;  
+    DWORD       TID;
+
+    int ret = WSAStartup(0x101,&WsaData); 
+    if (ret != 0) return 0;  
+
+    ServerAddr.sin_family      = AF_INET;   
+    ServerAddr.sin_addr.s_addr = INADDR_ANY;   
+    ServerAddr.sin_port        = htons(8554);                 // listen on RTSP port 8554
+    MasterSocket               = socket(AF_INET,SOCK_STREAM,0);   
+
+    // bind our master socket to the RTSP port and listen for a client connection
+    if (bind(MasterSocket,(sockaddr*)&ServerAddr,sizeof(ServerAddr)) != 0) return 0;  
+    if (listen(MasterSocket,5) != 0) return 0;
+
+    std::thread t{ RakNetLoop };
+
+    bool run = true;
+
+    while (run) {
+        if (!shouldTransmitRTSP) continue;
+
+        ClientSocket = accept(MasterSocket, (struct sockaddr*)&ClientAddr, &ClientAddrLen);
+        CreateThread(NULL, 0, SessionThreadHandler, &ClientSocket, 0, &TID);
+        printf("Client connected. Client address: %s\r\n", inet_ntoa(ClientAddr.sin_addr));
     }  
 
     //Clean up:
+    t.join(); //wait for the other thread to exit gracefully
     StreamDataManager::Instance().Cleanup();
-    RakNet::RakPeerInterface::DestroyInstance(peer);
 
     closesocket(MasterSocket);   
     WSACleanup();   
 
     return 0;  
-}
-
-StreamDataManager sm() {
-    return StreamDataManager();
 }

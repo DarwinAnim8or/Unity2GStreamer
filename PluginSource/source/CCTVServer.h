@@ -25,6 +25,11 @@ struct StreamSettings {
 
 using namespace RakNet;
 
+struct RGBAImage {
+	std::string data = "";
+	unsigned int size = 0;
+};
+
 class CCTVServer {
 public:
 	CCTVServer(int port = 3001);
@@ -33,10 +38,12 @@ public:
 	void Update(); //updates our rakPeer and checks for new messages from clients
 
 	void SendHandshakeResponse(bool success, RakNetGUID& clientGUID);
-	void SendNewFrameToEveryone(unsigned char* bytes, size_t size);
+	void SendNewFrameToEveryone(unsigned char* bytes, size_t size, int width, int height);
 	void SendNewFrameToRemoteGstreamer(RakNetGUID client, const char* bytes, size_t size);
 	void SendStreamSettings(const StreamSettings& settings);
 	void Disconnect(RakNetGUID client);
+
+	RGBAImage GenerateRandomRGBAImage(int width, int height);
 
 private:
 	std::map<uint32_t, RakNetGUID> m_Clients;
@@ -45,4 +52,6 @@ private:
 	RakNet::RakPeerInterface* m_Peer;
 	RakNet::SocketDescriptor m_Socket;
 	Packet* m_Packet;
+
+	int frameCount = 0;
 };

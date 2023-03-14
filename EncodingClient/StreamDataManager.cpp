@@ -1,4 +1,7 @@
 #include "StreamDataManager.h"
+#include <iostream>
+
+StreamData globalDataBcFuckIt;
 
 void StreamDataManager::Initialize() {
 }
@@ -19,14 +22,25 @@ void StreamDataManager::StopStream(unsigned int id) {
 }
 
 void StreamDataManager::SetDataForStream(unsigned int id, StreamData data) {
+    if (data.data == nullptr) return;
+    globalDataBcFuckIt = data;
+    
+    std::cout << data.data[0] << std::endl;
+
+    return;
+
     auto it = m_Streams.find(id);
     if (it != m_Streams.end()) {
         if (it->second.data) delete[] it->second.data; //delete existing image if any
         it->second = data;
     }
+    else {
+        m_Streams.insert(std::make_pair(id, data));
+    }
 }
 
 const StreamData* StreamDataManager::GetDataForStream(unsigned int id) const {
+    return &globalDataBcFuckIt;
     auto it = m_Streams.find(id);
     if (it != m_Streams.cend()) {
         return &it->second;

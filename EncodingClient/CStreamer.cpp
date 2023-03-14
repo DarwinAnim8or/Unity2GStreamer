@@ -335,7 +335,7 @@ struct RGBAImage {
     unsigned int size = 0;
 
     ~RGBAImage() {
-        delete[] data;
+        //delete[] data;
     }
 };
 
@@ -354,10 +354,25 @@ RGBAImage GenerateRandomRGBAImage(int width, int height) {
     for (int i = 0; i < height; i++) {
         for (int j = 0; j < width; j++) {
             pos = (i * width + j) * 4;
-            toReturn.data[pos] = sin(frameCount) * 255; // red
-            toReturn.data[pos + 1] = cos(frameCount) * 255; // green
-            toReturn.data[pos + 2] = tan(frameCount) * 255; // blue
-            toReturn.data[pos + 3] = 255; // alpha
+
+            //toReturn.data[pos] = sin(frameCount) * 255; // red
+            //toReturn.data[pos + 1] = cos(frameCount) * 255; // green
+            //toReturn.data[pos + 2] = tan(frameCount) * 255; // blue
+            //toReturn.data[pos + 3] = 255; // alpha
+
+            //simple effect:
+            float t = (float)frameCount * 4.0f;
+            int vv = int(
+                (127.0f + (127.0f * sinf(j / 7.0f + t))) +
+                (127.0f + (127.0f * sinf(i / 5.0f - t))) +
+                (127.0f + (127.0f * sinf((j + i) / 6.0f - t))) +
+                (127.0f + (127.0f * sinf(sqrtf(float(j * j + i * i)) / 4.0f - t)))
+                ) / 4;
+
+            toReturn.data[pos] = vv;
+            toReturn.data[pos + 1] = vv;
+            toReturn.data[pos + 2] = vv;
+            toReturn.data[pos + 3] = vv;
         }
     }
 
@@ -371,7 +386,9 @@ void CStreamer::StreamImage(int StreamID)
     //RGBAImage image = GenerateRandomRGBAImage(1280, 720);
 
     //Fetch our image from the SD Manager:
-    StreamData image = *StreamDataManager::Instance().GetDataForStream(StreamID);
+    StreamData image = *StreamDataManager::Instance().GetDataForStream(StreamID + 1);
+
+    if (image.data == nullptr) return;
 
     //Use libjpeg-turbo to encode this as a JPEG image:
     unsigned char* compressedImage = NULL;
@@ -380,14 +397,16 @@ void CStreamer::StreamImage(int StreamID)
     tjCompress2(jpegCompressor, image.data, 1280, 0, 720, TJPF_RGBA, &compressedImage, &compressedImageSize, TJSAMP_420, 75, TJFLAG_FASTDCT);
     tjDestroy(jpegCompressor);
 
-    ////For testing, write the jpeg to disk:
-    //std::ofstream outFile("./test.jpg", std::ios_base::binary);
-    //if (outFile) {
-    //    for (unsigned long i = 0; i < compressedImageSize; i++) {
-    //        outFile << compressedImage[i];
-    //    }
-    //}
-    //outFile.close();
+    if (compressedImage == nullptr) return;
+
+    //For testing, write the jpeg to disk:
+    std::ofstream outFile("./test.jpg", std::ios_base::binary);
+    if (outFile) {
+        for (unsigned long i = 0; i < compressedImageSize; i++) {
+            outFile << compressedImage[i];
+        }
+    }
+    outFile.close();
     
     //Parse the generated jpeg:
     JpegFrameParser parser;
@@ -423,6 +442,7 @@ void CStreamer::StreamImage(int StreamID)
 
     //Destroy jpeg data:
     tjFree(compressedImage);
+    //delete[] image.data;
 };
 
 // http://dystopiancode.blogspot.com/2012/02/pcm-law-and-u-law-companding-algorithms.html

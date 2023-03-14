@@ -93,10 +93,10 @@ void CCTVServer::SendHandshakeResponse(bool success, RakNetGUID& clientGUID) {
 	BitStream bs;
 	bs.Write((MessageID)Messages::ID_HANDSHAKE_RESPONSE);
 	bs.Write(success);
-	m_Peer->Send(&bs, PacketPriority::HIGH_PRIORITY, PacketReliability::RELIABLE_ORDERED, 0, clientGUID, false);
+	m_Peer->Send(&bs, PacketPriority::IMMEDIATE_PRIORITY, PacketReliability::RELIABLE_ORDERED, 0, clientGUID, false);
 }
 
-void CCTVServer::SendNewFrameToEveryone(unsigned char* bytes, size_t size) {
+void CCTVServer::SendNewFrameToEveryone(const char* bytes, size_t size) {
 	BitStream bitStream;
 	bitStream.Write((MessageID)Messages::ID_IMAGE_DATA);
 	bitStream.Write<unsigned int>((unsigned int)size);
@@ -105,7 +105,8 @@ void CCTVServer::SendNewFrameToEveryone(unsigned char* bytes, size_t size) {
 		bitStream.Write(bytes[i]);
 	}
 
-	m_Peer->Send(&bitStream, PacketPriority::HIGH_PRIORITY, PacketReliability::RELIABLE_ORDERED, 0, UNASSIGNED_SYSTEM_ADDRESS, true);
+	std::cout << bytes[0] << std::endl;
+	m_Peer->Send(&bitStream, PacketPriority::HIGH_PRIORITY, PacketReliability::UNRELIABLE, 0, UNASSIGNED_SYSTEM_ADDRESS, true);
 }
 
 void CCTVServer::SendNewFrameToRemoteGstreamer(RakNetGUID client, const char* bytes, size_t size) {
@@ -119,7 +120,7 @@ void CCTVServer::SendNewFrameToRemoteGstreamer(RakNetGUID client, const char* by
 
 	//TODO: Figure out which level of reliability is needed
 	//TODO: Implement a system that uses the orderingchannel, rather than TCP-like everything being channel 0.
-	m_Peer->Send(&bitStream, PacketPriority::HIGH_PRIORITY, PacketReliability::RELIABLE_ORDERED, 0, client, false);
+	m_Peer->Send(&bitStream, PacketPriority::HIGH_PRIORITY, PacketReliability::UNRELIABLE, 0, client, false);
 }
 
 void CCTVServer::SendStreamSettings(const StreamSettings& settings) {
@@ -128,7 +129,7 @@ void CCTVServer::SendStreamSettings(const StreamSettings& settings) {
 	bs.Write(settings.port);
 	bs.Write(settings.codec);
 	bs.Write(settings.useHardwareEncoder);
-	m_Peer->Send(&bs, PacketPriority::HIGH_PRIORITY, PacketReliability::RELIABLE_ORDERED, 0, RakNet::UNASSIGNED_RAKNET_GUID, true);
+	m_Peer->Send(&bs, PacketPriority::IMMEDIATE_PRIORITY, PacketReliability::RELIABLE_ORDERED, 0, RakNet::UNASSIGNED_RAKNET_GUID, true);
 }
 
 void CCTVServer::Disconnect(RakNetGUID client) {
@@ -138,4 +139,27 @@ void CCTVServer::Disconnect(RakNetGUID client) {
 			m_Peer->CloseConnection(addr.second, true);
 		}
 	}
+}
+
+RGBAImage CCTVServer::GenerateRandomRGBAImage(int width, int height) {
+	frameCount++;
+
+	//Create the new image:
+	RGBAImage toReturn;
+	toReturn.size = width * height * 4;
+	toReturn.data.resize(toReturn.size);
+
+	//Generate our image:
+	int pos = 0;
+	for (int i = 0; i < height; i++) {
+		for (int j = 0; j < width; j++) {
+			pos = (i * width + j) * 4;
+			toReturn.data[pos] = sin(frameCount) * 255; // red
+			toReturn.data[pos + 1] = cos(frameCount) * 255; // green
+			toReturn.data[pos + 2] = tan(frameCount) * 255; // blue
+			toReturn.data[pos + 3] = 255; // alpha
+		}
+	}
+
+	return toReturn;
 }
