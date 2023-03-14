@@ -249,6 +249,18 @@ void* RenderAPI_D3D11::BeginModifyTexture(void* textureHandle, int textureWidth,
 	// Just allocate a system memory buffer here for simplicity
 	unsigned char* data = new unsigned char[rowPitch * textureHeight];
 	*outRowPitch = rowPitch;
+
+	//Steal texture data from GPU
+	ID3D11DeviceContext* ctx = nullptr;
+	m_Device->GetImmediateContext(&ctx);
+
+	if (textureHandle) {
+		ID3D11Texture2D* d3dtex = (ID3D11Texture2D*)textureHandle;
+		d3dtex->GetDevice(&m_Device);
+
+		ctx->UpdateSubresource(d3dtex, 0, NULL, data, 0, 0);
+	}
+
 	return data;
 }
 

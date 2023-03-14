@@ -394,7 +394,15 @@ void CStreamer::StreamImage(int StreamID)
     unsigned char* compressedImage = NULL;
     unsigned long compressedImageSize;
     tjhandle jpegCompressor = tjInitCompress();
-    tjCompress2(jpegCompressor, image.data, image.width, 0, image.height, TJPF_RGBA, &compressedImage, &compressedImageSize, TJSAMP_420, 75, TJFLAG_FASTDCT);
+
+    try {
+        tjCompress2(jpegCompressor, image.data, image.width, 0, image.height, TJPF_ARGB, &compressedImage, &compressedImageSize, TJSAMP_420, 75, TJFLAG_FASTDCT);
+    }
+    catch (std::exception e) {
+        printf("%s\n", e.what());
+        compressedImage = nullptr;
+    }
+    
     tjDestroy(jpegCompressor);
 
     if (compressedImage == nullptr) return;

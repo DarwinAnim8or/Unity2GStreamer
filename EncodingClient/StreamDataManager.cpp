@@ -26,7 +26,7 @@ void StreamDataManager::SetDataForStream(unsigned int id, StreamData data) {
     if (globalDataBcFuckIt.data) delete[] globalDataBcFuckIt.data;
     globalDataBcFuckIt = data;
     
-    std::cout << data.data[0] << std::endl;
+    std::cout << "data: " << data.data[0] << std::endl;
 
     return;
 

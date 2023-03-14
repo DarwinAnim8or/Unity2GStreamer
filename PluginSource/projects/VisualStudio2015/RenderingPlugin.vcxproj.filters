@@ -27,7 +27,6 @@
     <ClInclude Include="..\..\source\gl3w\glcorearb.h">
       <Filter>gl3w</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\source\gstRtsp.h" />
     <ClInclude Include="..\..\source\CCTVServer.h" />
   </ItemGroup>
   <ItemGroup>
@@ -40,7 +39,6 @@
     <ClCompile Include="..\..\source\gl3w\gl3w.c">
       <Filter>gl3w</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\source\gstRtsp.cpp" />
     <ClCompile Include="..\..\source\CCTVServer.cpp" />
   </ItemGroup>
   <ItemGroup>

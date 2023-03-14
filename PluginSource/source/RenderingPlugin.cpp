@@ -190,22 +190,45 @@ static void AppendToLog(const char* string) {
 	}
 }
 
+unsigned int cur_RT = 0;
+extern "C" void UNITY_INTERFACE_EXPORT UNITY_INTERFACE_API SubmitRT(unsigned int rt) {
+	cur_RT = rt;
+}
+
+unsigned char* frameData = nullptr;
+int frameLenght = 0;
+
+extern "C" void UNITY_INTERFACE_EXPORT UNITY_INTERFACE_API UploadFrame(unsigned char* data, int length) {
+	if (frameData) delete[] frameData;
+
+	//Allocate the buffer:
+	frameData = new unsigned char[length];
+	for (int i = 0; i < length; i++) {
+		frameData[i] = data[i];
+	}
+}
+
 static void OnRenderEvent(int eventID)
 {
 	//Handle any packets from the server:
 	if (g_Server) g_Server->Update();
 
-	if (g_TextureHandle == NULL)
-		return;
 
 	int textureRowPitch;
-	void* textureDataPtr = s_CurrentAPI->BeginModifyTexture(g_TextureHandle, g_TextureWidth, g_TextureHeight, &textureRowPitch);
+	/*void* textureDataPtr = s_CurrentAPI->BeginModifyTexture(g_TextureHandle, g_TextureWidth, g_TextureHeight, &textureRowPitch);
 	if (!textureDataPtr)
-		return;
+		return;*/
 
-	g_Server->SendNewFrameToEveryone((unsigned char*)textureDataPtr, g_TextureWidth * g_TextureHeight * 4, g_TextureWidth, g_TextureHeight);
+	//GLuint gltex = (GLuint)(size_t)(g_TextureHandle);
+	//glBindTexture(GL_TEXTURE_2D, gltex);
+	//glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_BYTE, pData);
+	
 
-	s_CurrentAPI->EndModifyTexture(g_TextureHandle, g_TextureWidth, g_TextureHeight, textureRowPitch, textureDataPtr);
+	//Broadcast our new image to everyone:
+	g_Server->SendNewFrameToEveryone((unsigned char*)frameData, g_TextureWidth * g_TextureHeight * 4, g_TextureWidth, g_TextureHeight);
+
+	//Send the texture back to unity, and then take it to "go live on a farm"
+	s_CurrentAPI->EndModifyTexture(g_TextureHandle, g_TextureWidth, g_TextureHeight, 0, frameData);
 }
 
 extern "C" UnityRenderingEvent UNITY_INTERFACE_EXPORT UNITY_INTERFACE_API GetRenderEventFunc()

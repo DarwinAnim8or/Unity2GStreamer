@@ -22,7 +22,6 @@
     <ClInclude Include="..\..\source\CCTVServer.h" />
     <ClInclude Include="..\..\source\gl3w\gl3w.h" />
     <ClInclude Include="..\..\source\gl3w\glcorearb.h" />
-    <ClInclude Include="..\..\source\gstRtsp.h" />
     <ClInclude Include="..\..\source\PlatformBase.h" />
     <ClInclude Include="..\..\source\RenderAPI.h" />
     <ClInclude Include="..\..\source\Unity\IUnityGraphics.h" />
@@ -35,7 +34,6 @@
   <ItemGroup>
     <ClCompile Include="..\..\source\CCTVServer.cpp" />
     <ClCompile Include="..\..\source\gl3w\gl3w.c" />
-    <ClCompile Include="..\..\source\gstRtsp.cpp" />
     <ClCompile Include="..\..\source\RenderAPI.cpp" />
     <ClCompile Include="..\..\source\RenderAPI_D3D11.cpp" />
     <ClCompile Include="..\..\source\RenderAPI_D3D12.cpp" />

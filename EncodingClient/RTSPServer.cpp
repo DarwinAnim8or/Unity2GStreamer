@@ -169,7 +169,7 @@ void RakNetLoop() {
 
             case (int)Messages::ID_IMAGE_DATA:
             {
-                std::cout << "img data wee" << std::endl;
+                //std::cout << "img data wee" << std::endl;
                 RakNet::BitStream is(packet->data, packet->length, false);
                 MessageID msgID;
                 StreamData newData;
