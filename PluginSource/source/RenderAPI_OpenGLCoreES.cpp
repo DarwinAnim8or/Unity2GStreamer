@@ -134,9 +134,11 @@ static GLuint CreateShader(GLenum type, const char* sourceText)
 	return ret;
 }
 
-
 void RenderAPI_OpenGLCoreES::CreateResources()
 {
+#	if UNITY_WIN
+	gl3wInit();
+#	endif
 	// Make sure that there are no GL error flags set before creating resources
 	while (glGetError() != GL_NO_ERROR) {}
 
@@ -154,10 +156,6 @@ void RenderAPI_OpenGLCoreES::CreateResources()
 #	if SUPPORT_OPENGL_CORE
 	else if (m_APIType == kUnityGfxRendererOpenGLCore)
 	{
-#		if UNITY_WIN
-		gl3wInit();
-#		endif
-
 		m_VertexShader = CreateShader(GL_VERTEX_SHADER, kGlesVProgTextGLCore);
 		m_FragmentShader = CreateShader(GL_FRAGMENT_SHADER, kGlesFShaderTextGLCore);
 	}
