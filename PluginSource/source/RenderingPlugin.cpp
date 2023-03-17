@@ -14,6 +14,8 @@
 
 #include "gstRtsp.h"
 #include "CCTVServer.h"
+#include <d3d11.h>
+#include <d3d.h>
 
 //CCTVServer server;
 
@@ -182,53 +184,62 @@ static void ModifyTexturePixels()
 	s_CurrentAPI->EndModifyTexture(textureHandle, width, height, textureRowPitch, textureDataPtr);
 }
 
-static void AppendToLog(const char* string) {
-	FILE* file = fopen("log.txt", "w");
-	if (file) {
-		fprintf(file, string);
-		fclose(file);
-	}
-}
-
 unsigned int cur_RT = 0;
 extern "C" void UNITY_INTERFACE_EXPORT UNITY_INTERFACE_API SubmitRT(unsigned int rt) {
 	cur_RT = rt;
 }
 
 unsigned char* frameData = nullptr;
-int frameLenght = 0;
+int frameLength = 0;
 
 extern "C" void UNITY_INTERFACE_EXPORT UNITY_INTERFACE_API UploadFrame(unsigned char* data, int length) {
-	if (frameData) delete[] frameData;
+	//if (frameData) delete[] frameData; //already done by EndModifyTexture
 
 	//Allocate the buffer:
-	frameData = new unsigned char[length];
-	for (int i = 0; i < length; i++) {
+	if (length != frameLength)
+		frameData = new unsigned char[length];
+
+	//Copy our memory:
+	/*for (int i = 0; i < length; i++) {
 		frameData[i] = data[i];
-	}
+	}*/
+
+	memcpy(frameData, data, length);
+}
+
+extern "C" void UNITY_INTERFACE_EXPORT UNITY_INTERFACE_API UpdateRakNet() {
+	if (g_Server) g_Server->Update();
+	else std::cout << "No g_Server active!" << std::endl;
+}
+
+bool g_ReadFromGPU = false;
+
+extern "C" void UNITY_INTERFACE_EXPORT UNITY_INTERFACE_API SetReadFromGPU(bool value) {
+	g_ReadFromGPU = value;
 }
 
 static void OnRenderEvent(int eventID)
 {
-	//Handle any packets from the server:
-	if (g_Server) g_Server->Update();
+	void* textureObject = (void*)g_TextureHandle; // Cast to void* or appropriate texture object type for your plugin
 
+	int width = g_TextureWidth;
+	int height = g_TextureHeight;
+	int bufferSize = width * height * 4; // RGBA format
 
-	int textureRowPitch;
-	/*void* textureDataPtr = s_CurrentAPI->BeginModifyTexture(g_TextureHandle, g_TextureWidth, g_TextureHeight, &textureRowPitch);
-	if (!textureDataPtr)
-		return;*/
+	if (g_ReadFromGPU) {
+		if (frameLength != bufferSize)
+			frameData = new unsigned char[bufferSize];
 
-	//GLuint gltex = (GLuint)(size_t)(g_TextureHandle);
-	//glBindTexture(GL_TEXTURE_2D, gltex);
-	//glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_BYTE, pData);
-	
+		//Read texture from GPU memory:
+		s_CurrentAPI->ReadTextureData(textureObject, frameData, bufferSize);
+	}
+	//else, the texture is already supplied to use by the "UploadFrame" function, which is called by the C# side in Unity itself.
 
 	//Broadcast our new image to everyone:
-	g_Server->SendNewFrameToEveryone((unsigned char*)frameData, g_TextureWidth * g_TextureHeight * 4, g_TextureWidth, g_TextureHeight);
+	g_Server->SendNewFrameToEveryone((unsigned char*)frameData, bufferSize, width, height);
 
-	//Send the texture back to unity, and then take it to "go live on a farm"
-	s_CurrentAPI->EndModifyTexture(g_TextureHandle, g_TextureWidth, g_TextureHeight, 0, frameData);
+	//Delete the texture:
+	delete[] frameData;
 }
 
 extern "C" UnityRenderingEvent UNITY_INTERFACE_EXPORT UNITY_INTERFACE_API GetRenderEventFunc()
