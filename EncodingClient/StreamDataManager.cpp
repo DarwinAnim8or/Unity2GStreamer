@@ -1,5 +1,6 @@
 #include "StreamDataManager.h"
 #include <iostream>
+#include <mutex>
 
 StreamData globalDataBcFuckIt;
 
@@ -24,9 +25,11 @@ void StreamDataManager::StopStream(unsigned int id) {
 void StreamDataManager::SetDataForStream(unsigned int id, StreamData data) {
     if (data.data == nullptr) return;
     if (globalDataBcFuckIt.data) delete[] globalDataBcFuckIt.data;
-    globalDataBcFuckIt = data;
-    
-    std::cout << "data: " << data.data[0] << std::endl;
+
+    if (!mutex.try_lock()) return;
+        globalDataBcFuckIt = data;
+        std::cout << "data: " << data.data[0] << std::endl;
+    mutex.unlock();
 
     return;
 
@@ -41,6 +44,8 @@ void StreamDataManager::SetDataForStream(unsigned int id, StreamData data) {
 }
 
 const StreamData* StreamDataManager::GetDataForStream(unsigned int id) const {
+    //if (m_RakNetTomfoolery) return nullptr;
+
     return &globalDataBcFuckIt;
     auto it = m_Streams.find(id);
     if (it != m_Streams.cend()) {

@@ -4,6 +4,7 @@
 #include "Singleton.h"
 
 #include "BitStream.h"
+#include <mutex>
 
 struct StreamData {
 	unsigned int size;
@@ -37,7 +38,14 @@ public:
 	void SetDataForStream(unsigned int id, StreamData data);
 	const StreamData* GetDataForStream(unsigned int id) const;
 
+	bool IsTomFoolery() const { return m_RakNetTomfoolery; }
+	void SetTomFoolery(bool value) { m_RakNetTomfoolery = value; }
+
+	std::mutex mutex;
+
 private:
 	std::map<unsigned int, StreamData> m_Streams;
+	bool m_RakNetTomfoolery = false;
+	
 };
 
