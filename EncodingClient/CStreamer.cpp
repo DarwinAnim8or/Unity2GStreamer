@@ -380,77 +380,110 @@ RGBAImage GenerateRandomRGBAImage(int width, int height) {
 }
 
 #define PACKETSIZE 1400
-void CStreamer::StreamImage(int StreamID)
-{
-    //Get a random RGBA Image:
-    //RGBAImage image = GenerateRandomRGBAImage(1280, 720);
-
-    //Fetch our image from the SD Manager:
-    StreamData image = *StreamDataManager::Instance().GetDataForStream(StreamID + 1);
-
-    if (image.data == nullptr) return;
-
-    //Use libjpeg-turbo to encode this as a JPEG image:
-    unsigned char* compressedImage = NULL;
-    unsigned long compressedImageSize;
-    tjhandle jpegCompressor = tjInitCompress();
-
+void CStreamer::StreamImage(char* data, unsigned int length, unsigned int width, unsigned int height) {
     try {
-        tjCompress2(jpegCompressor, image.data, image.width, 0, image.height, TJPF_ARGB, &compressedImage, &compressedImageSize, TJSAMP_420, 75, TJFLAG_FASTDCT);
-    }
-    catch (std::exception e) {
-        printf("%s\n", e.what());
-        compressedImage = nullptr;
-    }
-    
-    tjDestroy(jpegCompressor);
+        // Fetch our image from the SD Manager:
+        //StreamData image = *StreamDataManager::Instance().GetDataForStream(StreamID + 1);
 
-    if (compressedImage == nullptr) return;
+        // Validate image data before compression
+        /*if (image.data == nullptr || image.width <= 0 || image.height <= 0 || image.size < image.width * image.height * 4) {
+            printf("Invalid image data: data=%p, width=%d, height=%d, size=%d\n", image.data, image.width, image.height, image.size);
+            return;
+        }*/
 
-    //For testing, write the jpeg to disk:
-    std::ofstream outFile("./test.jpg", std::ios_base::binary);
-    if (outFile) {
-        for (unsigned long i = 0; i < compressedImageSize; i++) {
-            outFile << compressedImage[i];
+        // Flip the image vertically
+        //for (int y = 0; y < height / 2; ++y) {
+        //    for (int x = 0; x < width; ++x) {
+        //        // Swap the pixel at (x,y) with the pixel at (x,height-y-1)
+        //        const int topIdx = y * width + x;
+        //        const int bottomIdx = (height - y - 1) * width + x;
+        //        const unsigned char tempR = data[topIdx * 4];
+        //        const unsigned char tempG = data[topIdx * 4 + 1];
+        //        const unsigned char tempB = data[topIdx * 4 + 2];
+        //        const unsigned char tempA = data[topIdx * 4 + 3];
+        //        data[topIdx * 4] = data[bottomIdx * 4];
+        //        data[topIdx * 4 + 1] = data[bottomIdx * 4 + 1];
+        //        data[topIdx * 4 + 2] = data[bottomIdx * 4 + 2];
+        //        data[topIdx * 4 + 3] = data[bottomIdx * 4 + 3];
+        //        data[bottomIdx * 4] = tempR;
+        //        data[bottomIdx * 4 + 1] = tempG;
+        //        data[bottomIdx * 4 + 2] = tempB;
+        //        data[bottomIdx * 4 + 3] = tempA;
+        //    }
+        //}
+
+        // Use libjpeg-turbo to encode this as a JPEG image:
+        unsigned char* compressedImage = nullptr;
+        unsigned long compressedImageSize = 0;
+        tjhandle jpegCompressor = tjInitCompress();
+
+        // Set JPEG quality as a constant or configuration parameter
+        const int jpegQuality = 75;
+
+        // Compress image using libjpeg-turbo
+        int tjResult = tjCompress2(jpegCompressor, (const unsigned char*)data, width, 0, height, TJPF_ARGB, &compressedImage, &compressedImageSize, TJSAMP_420, jpegQuality, TJFLAG_FASTDCT);
+
+        // Check for compression errors
+        if (tjResult != 0) {
+            printf("Failed to compress image: %s\n", tjGetErrorStr());
+            tjDestroy(jpegCompressor);
+            return;
         }
-    }
-    outFile.close();
-    
-    //Parse the generated jpeg:
-    JpegFrameParser parser;
-    parser.parse(compressedImage, compressedImageSize);
 
-    //Set our header and scan data:
-    unsigned short tablesLength;
-    auto tables = parser.quantizationTables(tablesLength);
-
-    unsigned int scanLength;
-    auto scanData = parser.scandata(scanLength);
-
-    //Finally send the data:
-    bool isLastPacket = false;
-    unsigned int length, sentLength;
-    sentLength = 0;
-
-    //while we haven't sent all our jpeg scan data yet:
-    while (sentLength < scanLength) { 
-        //if the sum of sent data and bytes per packet is less than the total scan length, we'll be sending up a follow-up packet containing more image data.
-        if (sentLength + PACKETSIZE < scanLength) { 
-            length = PACKETSIZE;
-            isLastPacket = false;
-        } 
-        else { //this is triggered when we're sending our last bits of data
-            length = scanLength - sentLength;
-            isLastPacket = true;
+        // Send compressed image over RTSP
+        //For testing, write the jpeg to disk:
+        std::ofstream outFile("./test.jpg", std::ios_base::binary);
+        if (outFile) {
+            for (unsigned long i = 0; i < compressedImageSize; i++) {
+                outFile << compressedImage[i];
+            }
         }
 
-        SendRtpJpegPacket(scanData + sentLength, length, image.width / 8, image.height / 8, tables, tablesLength, sentLength, isLastPacket, StreamID);
-        sentLength += length;
-    }
+        outFile.close();
 
-    //Destroy jpeg data:
-    tjFree(compressedImage);
-    //delete[] image.data;
+        //Parse the generated jpeg:
+        JpegFrameParser parser;
+        parser.parse(compressedImage, compressedImageSize);
+
+        //Set our header and scan data:
+        unsigned short tablesLength;
+        auto tables = parser.quantizationTables(tablesLength);
+
+        unsigned int scanLength;
+        auto scanData = parser.scandata(scanLength);
+
+        //Finally send the data:
+        bool isLastPacket = false;
+        unsigned int length, sentLength;
+        sentLength = 0;
+
+        //while we haven't sent all our jpeg scan data yet:
+        while (sentLength < scanLength) {
+            //if the sum of sent data and bytes per packet is less than the total scan length, we'll be sending up a follow-up packet containing more image data.
+            if (sentLength + PACKETSIZE < scanLength) {
+                length = PACKETSIZE;
+                isLastPacket = false;
+            }
+            else { //this is triggered when we're sending our last bits of data
+                length = scanLength - sentLength;
+                isLastPacket = true;
+            }
+
+            SendRtpJpegPacket(scanData + sentLength, length, width / 8, height / 8, tables, tablesLength, sentLength, isLastPacket, 1);
+            sentLength += length;
+        }
+
+        // Free memory allocated by libjpeg-turbo
+        tjFree(compressedImage);
+        tjDestroy(jpegCompressor);
+
+        //Free memory by parser:
+        //delete[] parser.scandata;
+    }
+    catch (const std::exception& e) {
+        // Handle exceptions
+        printf("Exception caught: %s\n", e.what());
+    }
 };
 
 // http://dystopiancode.blogspot.com/2012/02/pcm-law-and-u-law-companding-algorithms.html

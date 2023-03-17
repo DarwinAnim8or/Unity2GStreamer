@@ -19,7 +19,7 @@ public:
     u_short GetRtcpServerPort();
     u_short GetRtpAudioServerPort();
     u_short GetRtcpAudioServerPort();
-    void    StreamImage(int StreamID);
+    void    StreamImage(char* data, unsigned int length, unsigned int width, unsigned int height);
     void    StreamAudio(int StreamID);
 
 private:
