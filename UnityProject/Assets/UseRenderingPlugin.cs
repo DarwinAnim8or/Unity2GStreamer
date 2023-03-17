@@ -2,11 +2,18 @@ using UnityEngine;
 using System;
 using System.Collections;
 using System.Runtime.InteropServices;
-
+using UnityEngine.Rendering;
 
 public class UseRenderingPlugin : MonoBehaviour
 {
 	//TODO: define variables here, rather than in CreateTextureAndPassToPlugin()
+	int frameCount = 0;
+
+	//Indicates whether or not the frame will be read from the GPU on the plugin side. Must be set BEFORE playing the scene.
+	public bool readFromGPU = false;
+	Texture2D tempTexture;
+
+	//--------------------------------------------------------------------------------------------------------------------------------------------------------
 
 	// Native plugin rendering events are only called if a plugin is used
 	// by some script. This means we have to DllImport at least
@@ -29,13 +36,20 @@ public class UseRenderingPlugin : MonoBehaviour
 	private static extern IntPtr GetRenderEventFunc(); //handles the received frame
 
 	[DllImport("Unity2GStreamerPlugin")]
-	private static extern void SubmitRT(uint rt);
+	private static extern void UpdateRakNet(); //handles our networking
 
 	[DllImport("Unity2GStreamerPlugin")]
 	private static extern void UploadFrame(byte[] data, int length);
 
+	[DllImport("Unity2GStreamerPlugin")]
+	private static extern void SetReadFromGPU(bool value);
+
 	IEnumerator Start() {
 		CreateTextureAndPassToPlugin(); //create our output render texture
+
+		//Tell the plugin whether or not we're going to be using the GPU:
+		SetReadFromGPU(readFromGPU);
+
 		yield return StartCoroutine("CallPluginAtEndOfFrames"); //setup a function to call when we're done rendering a frame
 	}
 
@@ -49,6 +63,9 @@ public class UseRenderingPlugin : MonoBehaviour
 		m_MainCamera.targetTexture = m_RenderTexture;
 		m_MainCamera.Render(); //note that we're manually calling Render on the camera here! this renders 1 frame.
 
+		//Create a texture2D for passing:
+		tempTexture = new Texture2D(m_RenderTexture.width, m_RenderTexture.height, TextureFormat.ARGB32, false);
+
 		//tell our plugin where the texture is, so it can load it when we're done rendering:
 		SetTextureFromUnity(m_MainCamera.targetTexture.GetNativeTexturePtr(), m_MainCamera.pixelWidth, m_MainCamera.pixelHeight);
 		Debug.Log("Setting texture from Unity");
@@ -57,39 +74,55 @@ public class UseRenderingPlugin : MonoBehaviour
 	}
 
 	void Update() {
+		frameCount++;
+		if (frameCount % 4 != 0) return;
 		GetComponent<Camera>().Render(); //render the camera
 	}
 
 	Texture2D toTexture2D(RenderTexture rTex)
     {
-        Texture2D tex = new Texture2D(rTex.width, rTex.height, TextureFormat.ARGB32, false);
         // ReadPixels looks at the active RenderTexture.
         RenderTexture.active = rTex;
-        tex.ReadPixels(new Rect(0, 0, rTex.width, rTex.height), 0, 0);
-        tex.Apply(); //this would upload our image to the GPU again, but it isn't relevant for us.
-        return tex;
+
+		AsyncGPUReadback.Request(rTex, 0, TextureFormat.ARGB32, (AsyncGPUReadbackRequest request) => {
+			if (request.hasError) {
+				Debug.LogError("GPU readback error!");
+			} else {
+				tempTexture.SetPixelData(request.GetData<byte>(), 0);
+				//outputTexture.Apply();
+			}
+		});
+
+        //tempTexture.ReadPixels(new Rect(0, 0, rTex.width, rTex.height), 0, 0);
+        //tempTexture.Apply(); //this would upload our image to the GPU again, but it isn't relevant for us.
+        return tempTexture;
     }
 
 	private IEnumerator CallPluginAtEndOfFrames() {
 		while(true) 
 		{
 			yield return new WaitForEndOfFrame(); //wait until the frame is done
-			SetTimeFromUnity (Time.timeSinceLevelLoad); //tell our plugin what time it is
+			UpdateRakNet();
 
-			//Get the render texture as a Texture2D so we can access the pixels
-			var texture = toTexture2D(GetComponent<Camera>().targetTexture);
+			//frameCount++;
+			if (frameCount % 4 != 0) continue;
+			frameCount = 0;
 
-			//convert the byte array to a float array:
-			byte[] data = texture.GetRawTextureData();
+			if (!readFromGPU) {
+				//Get the render texture as a Texture2D so we can access the pixels
+				var texture = toTexture2D(GetComponent<Camera>().targetTexture);
 
-			//Debug.Log("data length: " + data.Length);
+				//convert the byte array to a float array:
+				byte[] data = texture.GetRawTextureData();
 
-			//Save the image for debugging:
-			//byte[] bytes = texture.EncodeToPNG();
-			//System.IO.File.WriteAllBytes(Application.dataPath + "/../SavedScreen.png", bytes);
+				//Save the image for debugging:
+				//Debug.Log("data length: " + data.Length);
+				//byte[] bytes = texture.EncodeToPNG();
+				//System.IO.File.WriteAllBytes(Application.dataPath + "/../SavedScreen.png", bytes);
 
-			//pass to plugin:
-			UploadFrame(data, data.Length);
+				//pass to plugin:
+				UploadFrame(data, data.Length);
+			}
 
 			GL.IssuePluginEvent(GetRenderEventFunc(), 1); //tell our plugin it can begin processing our frame, the 1 is the event
 			//it may be possible to just use the eventID as the channelID later on.

@@ -6,6 +6,6 @@ EditorBuildSettings:
   serializedVersion: 2
   m_Scenes:
   - enabled: 1
-    path: Assets/scene.unity
-    guid: c159f2591a9b5c843b0a0442451f78f8
+    path: Assets/Scenes/BounceBall.unity
+    guid: bebce999821a8d64490992ea4b30681d
   m_configObjects: {}
