@@ -11,6 +11,7 @@
 #include <assert.h>
 #include <d3d12.h>
 #include "Unity/IUnityGraphicsD3D12.h"
+#include <iostream>
 
 
 class RenderAPI_D3D12 : public RenderAPI
@@ -30,6 +31,10 @@ public:
 
 	virtual void* BeginModifyVertexBuffer(void* bufferHandle, size_t* outBufferSize);
 	virtual void EndModifyVertexBuffer(void* bufferHandle);
+
+	virtual void ReadTextureData(void* textureObject, unsigned char* buffer, int bufferSize) {
+		std::cout <<  "Unimplemented function! ReadTextureData\n";
+	}
 
 private:
 	UINT64 AlignPow2(UINT64 value);

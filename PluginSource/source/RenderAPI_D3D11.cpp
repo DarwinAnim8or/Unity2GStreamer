@@ -28,6 +28,8 @@ public:
 	virtual void* BeginModifyVertexBuffer(void* bufferHandle, size_t* outBufferSize);
 	virtual void EndModifyVertexBuffer(void* bufferHandle);
 
+	virtual void ReadTextureData(void* textureObject, unsigned char* buffer, int bufferSize);
+
 private:
 	void CreateResources();
 	void ReleaseResources();
@@ -306,6 +308,54 @@ void RenderAPI_D3D11::EndModifyVertexBuffer(void* bufferHandle)
 	m_Device->GetImmediateContext(&ctx);
 	ctx->Unmap(d3dbuf, 0);
 	ctx->Release();
+}
+
+void RenderAPI_D3D11::ReadTextureData(void* textureObject, unsigned char* buffer, int bufferSize) {
+	if (!m_Device) return;
+
+	ID3D11Texture2D* texture = (ID3D11Texture2D*)textureObject;
+
+	// Create a staging texture that we can copy the texture data to
+	D3D11_TEXTURE2D_DESC desc;
+	texture->GetDesc(&desc);
+	desc.BindFlags = 0;
+	desc.Usage = D3D11_USAGE_STAGING;
+	desc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
+	ID3D11Texture2D* stagingTexture = nullptr;
+	HRESULT hr = m_Device->CreateTexture2D(&desc, nullptr, &stagingTexture);
+	if (FAILED(hr)) {
+		// Handle error
+		return;
+	}
+
+	// Copy texture data from the original texture to the staging texture
+	ID3D11DeviceContext* context = nullptr;
+	m_Device->GetImmediateContext(&context);
+	context->CopyResource(stagingTexture, texture);
+
+	// Map the staging texture and read the pixel data
+	D3D11_MAPPED_SUBRESOURCE mappedResource;
+	hr = context->Map(stagingTexture, 0, D3D11_MAP_READ, 0, &mappedResource);
+	if (FAILED(hr)) {
+		// Handle error
+		stagingTexture->Release();
+		context->Release();
+		return;
+	}
+
+	unsigned char* src = (unsigned char*)mappedResource.pData;
+	unsigned char* dest = buffer;
+	for (int i = 0; i < desc.Height; ++i) {
+		memcpy(dest, src, desc.Width * 4);
+		src += mappedResource.RowPitch;
+		dest += desc.Width * 4;
+	}
+
+	context->Unmap(stagingTexture, 0);
+
+	// Release resources
+	stagingTexture->Release();
+	context->Release();
 }
 
 #endif // #if SUPPORT_D3D11

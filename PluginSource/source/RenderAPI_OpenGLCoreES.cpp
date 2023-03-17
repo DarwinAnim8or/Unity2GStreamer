@@ -1,6 +1,8 @@
 #include "RenderAPI.h"
 #include "PlatformBase.h"
 
+#include <iostream>
+
 // OpenGL Core profile (desktop) or OpenGL ES (mobile) implementation of RenderAPI.
 // Supports several flavors: Core, ES2, ES3
 
@@ -51,6 +53,10 @@ public:
 
 	virtual void* BeginModifyVertexBuffer(void* bufferHandle, size_t* outBufferSize);
 	virtual void EndModifyVertexBuffer(void* bufferHandle);
+
+	virtual void ReadTextureData(void* textureObject, unsigned char* buffer, int bufferSize) {
+		std::cout << "Unimplemented function! ReadTextureData\n";
+	}
 
 private:
 	void CreateResources();
