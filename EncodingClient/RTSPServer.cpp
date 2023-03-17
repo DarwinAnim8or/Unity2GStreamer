@@ -20,6 +20,7 @@
 #include "MessageIdentifiers.h"
 #include "BitStream.h"
 #include "RakNetTypes.h"
+#include "RakSleep.h"
 
 //Custom includes:
 #include "NetworkDefines.h"
@@ -29,6 +30,11 @@ using namespace RakNet;
 
 StreamDataManager sm();
 bool shouldTransmitRTSP = false;
+
+std::mutex dataMutex;
+char* data = new char[1];
+unsigned int size = 0;
+unsigned int width, height;
 
 DWORD WINAPI SessionThreadHandler(LPVOID lpParam)
 {
@@ -49,7 +55,7 @@ DWORD WINAPI SessionThreadHandler(LPVOID lpParam)
     WaitEvents[1] = HTimer;
 
     // set frame rate timer
-    double T = 40.0;                                       // frame rate
+    double T = 80.0;                                       // frame rate
     int iT   = (int) T;
     const __int64 DueTime = - static_cast<const __int64>(iT) * 10 * 1000;
     ::SetWaitableTimer(HTimer,reinterpret_cast<const LARGE_INTEGER*>(&DueTime),iT,NULL,NULL,false);
@@ -81,8 +87,10 @@ DWORD WINAPI SessionThreadHandler(LPVOID lpParam)
             case WAIT_OBJECT_0 + 1 : 
             {
                 if (StreamingStarted) {
-                  Streamer.StreamImage(RtspSession.GetStreamID());
+                    if (!dataMutex.try_lock()) continue;
+                    Streamer.StreamImage(data, size, width, height);//RtspSession.GetStreamID());
                   //Streamer.StreamAudio(RtspSession.GetStreamID());
+                    dataMutex.unlock();
                 }
                 break;
             };
@@ -114,89 +122,109 @@ void RakNetLoop() {
 
     bool run = true;
     while (run) {
-        //Check for packets from RakNet :
-        packet = peer->Receive();
-        if (packet) {
-            switch ((MessageID)packet->data[0]) {
-            case ID_DISCONNECTION_NOTIFICATION:
-            case ID_CONNECTION_LOST:
-                std::cout << "Disconnected." << std::endl;
-                run = false;
-                break;
+        for (packet = peer->Receive(); packet; peer->DeallocatePacket(packet), packet = peer->Receive()) {
+            //Check for packets from RakNet :
+            //packet = peer->Receive();
+            if (packet) {
+                switch ((MessageID)packet->data[0]) {
+                case ID_DISCONNECTION_NOTIFICATION:
+                case ID_CONNECTION_LOST:
+                    std::cout << "Disconnected." << std::endl;
+                    run = false;
+                    break;
 
-            case ID_CONNECTION_REQUEST_ACCEPTED:
-            {
-                std::cout << "Our connection request has been accepted. Sending handshake..." << std::endl;
-                serverGUID = packet->guid;
-                RakNet::BitStream bs;
-                bs.Write((MessageID)Messages::ID_HANDSHAKE);
-                bs.Write<int>(NET_VERSION);
-                peer->Send(&bs, PacketPriority::HIGH_PRIORITY, PacketReliability::RELIABLE_ORDERED, 0, serverGUID, false);
-                break;
+                case ID_CONNECTION_REQUEST_ACCEPTED:
+                {
+                    std::cout << "Our connection request has been accepted. Sending handshake..." << std::endl;
+                    serverGUID = packet->guid;
+                    RakNet::BitStream bs;
+                    bs.Write((MessageID)Messages::ID_HANDSHAKE);
+                    bs.Write<int>(NET_VERSION);
+                    peer->Send(&bs, PacketPriority::HIGH_PRIORITY, PacketReliability::RELIABLE_ORDERED, 0, serverGUID, false);
+                    break;
+                }
+
+                case (int)Messages::ID_HANDSHAKE_RESPONSE:
+                {
+                    RakNet::BitStream is(packet->data, packet->length, false);
+                    MessageID msgID;
+                    bool isOk = false;
+                    is.Read(msgID);
+                    is.Read(isOk);
+
+                    std::cout << "Handshake accepted: " << (int)isOk << std::endl;
+                    if (!isOk) run = false;
+                    else std::cout << "Awaiting streaming settings." << std::endl;
+                    break;
+                }
+
+                case (int)Messages::ID_STREAM_SETTINGS:
+                {
+                    RakNet::BitStream is(packet->data, packet->length, false);
+                    MessageID msgID;
+                    is.Read(msgID);
+                    is.Read(sSettings.port);
+                    is.Read(sSettings.codec);
+                    is.Read(sSettings.useHardwareEncoder);
+
+                    std::cout << "Stream settings received. Port: " << sSettings.port << ", Codec: " << sSettings.codec.C_String() << ", Use hardware encoder: " << sSettings.useHardwareEncoder << std::endl;
+
+                    //TODO: change our settings based on what we just received
+                    //StreamDataManager::Instance().AddStream(1);
+                    shouldTransmitRTSP = true;
+
+                    break;
+                }
+
+                case (int)Messages::ID_IMAGE_DATA:
+                {
+                    if (dataMutex.try_lock()) {
+                        delete[] data;
+
+                        //std::cout << "img data wee" << std::endl;
+                        RakNet::BitStream is(packet->data, packet->length, false);
+                        MessageID msgID;
+                        StreamData newData;
+                        is.Read(msgID);
+                        newData.Deserialize(is);
+
+                        //StreamDataManager::Instance().SetDataForStream(1, newData);
+
+                        if (size != newData.size)
+                            data = new char[newData.size];
+
+                        data = (char*)newData.data;
+                        size = newData.size;
+
+                        width = newData.width;
+                        height = newData.height;
+
+                        dataMutex.unlock();
+                    }
+
+                    break;
+                }
+
+                case ID_NO_FREE_INCOMING_CONNECTIONS:
+                    std::cout << "Server has no more free slots for us to connect to." << std::endl;
+                    run = false;
+                    break;
+
+                case ID_CONNECTION_ATTEMPT_FAILED:
+                    std::cout << "Connection timed out." << std::endl;
+                    run = false;
+                    break;
+
+                default:
+                    std::cout << "Message with ID: " << int(packet->data[0]) << " has arrived." << std::endl;
+                }
             }
 
-            case (int)Messages::ID_HANDSHAKE_RESPONSE:
-            {
-                RakNet::BitStream is(packet->data, packet->length, false);
-                MessageID msgID;
-                bool isOk = false;
-                is.Read(msgID);
-                is.Read(isOk);
-
-                std::cout << "Handshake accepted: " << (int)isOk << std::endl;
-                if (!isOk) run = false;
-                else std::cout << "Awaiting streaming settings." << std::endl;
-                break;
-            }
-
-            case (int)Messages::ID_STREAM_SETTINGS:
-            {
-                RakNet::BitStream is(packet->data, packet->length, false);
-                MessageID msgID;
-                is.Read(msgID);
-                is.Read(sSettings.port);
-                is.Read(sSettings.codec);
-                is.Read(sSettings.useHardwareEncoder);
-
-                std::cout << "Stream settings received. Port: " << sSettings.port << ", Codec: " << sSettings.codec.C_String() << ", Use hardware encoder: " << sSettings.useHardwareEncoder << std::endl;
-
-                //TODO: change our settings based on what we just received
-                StreamDataManager::Instance().AddStream(1);
-                shouldTransmitRTSP = true;
-
-                break;
-            }
-
-            case (int)Messages::ID_IMAGE_DATA:
-            {
-                //std::cout << "img data wee" << std::endl;
-                RakNet::BitStream is(packet->data, packet->length, false);
-                MessageID msgID;
-                StreamData newData;
-                is.Read(msgID);
-                newData.Deserialize(is);
-
-                StreamDataManager::Instance().SetDataForStream(1, newData);
-
-                break;
-            }
-
-            case ID_NO_FREE_INCOMING_CONNECTIONS:
-                std::cout << "Server has no more free slots for us to connect to." << std::endl;
-                run = false;
-                break;
-
-            case ID_CONNECTION_ATTEMPT_FAILED:
-                std::cout << "Connection timed out." << std::endl;
-                run = false;
-                break;
-
-            default:
-                std::cout << "Message with ID: " << int(packet->data[0]) << " has arrived." << std::endl;
-            }
+            //peer->DeallocatePacket(packet);
+            
         }
 
-        peer->DeallocatePacket(packet);
+        RakSleep(10);
     }
 
     RakPeerInterface::DestroyInstance(peer);
