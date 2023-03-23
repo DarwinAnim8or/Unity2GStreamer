@@ -1,0 +1,15 @@
+// MyComputeShader.compute
+
+RWByteAddressBuffer OutputBuffer;
+
+[numthreads(8, 8, 1)]
+void CSMain(uint3 dispatchThreadID : SV_DispatchThreadID)
+{
+    uint2 texelID = dispatchThreadID.xy;
+    uint bufferIndex = texelID.y * TextureWidth + texelID.x;
+
+    float4 texel = texelFetch(SourceTexture, texelID, 0);
+    byte value = (byte)(texel.r * 255.0);
+
+    OutputBuffer.InterlockedExchange(bufferIndex, value);
+}

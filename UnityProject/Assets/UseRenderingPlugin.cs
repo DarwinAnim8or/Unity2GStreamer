@@ -8,6 +8,7 @@ public class UseRenderingPlugin : MonoBehaviour
 {
 	//TODO: define variables here, rather than in CreateTextureAndPassToPlugin()
 	int frameCount = 0;
+	public int fpsForCam = 15; //Indicates the framerate of the camera. Must be set BEFORE playing the scene.
 
 	//Indicates whether or not the frame will be read from the GPU on the plugin side. Must be set BEFORE playing the scene.
 	public bool readFromGPU = false;
@@ -44,6 +45,13 @@ public class UseRenderingPlugin : MonoBehaviour
 	[DllImport("Unity2GStreamerPlugin")]
 	private static extern void SetReadFromGPU(bool value);
 
+	void Awake () {
+		#if UNITY_EDITOR
+			QualitySettings.vSyncCount = 0;  // VSync must be disabled
+			Application.targetFrameRate = 60;
+		#endif
+	}
+
 	IEnumerator Start() {
 		CreateTextureAndPassToPlugin(); //create our output render texture
 
@@ -55,11 +63,18 @@ public class UseRenderingPlugin : MonoBehaviour
 
 	private void CreateTextureAndPassToPlugin() {
 		Camera m_MainCamera = Camera.main;
-		//m_MainCamera.pixelRect = new Rect(0, 0, m_MainCamera.pixelWidth, m_MainCamera.pixelHeight);
+		//m_MainCamera.pixelRect = new Rect(0, 0, 1280, 720);
 
 		//create a new render texture based on the size of the main camera:
 		RenderTexture m_RenderTexture = new RenderTexture(m_MainCamera.pixelWidth, m_MainCamera.pixelHeight, 24, RenderTextureFormat.ARGB32);
+		/*m_RenderTexture.antiAliasing = 1;
+		m_RenderTexture.wrapMode = TextureWrapMode.Clamp;
+		m_RenderTexture.filterMode = FilterMode.Point;
+		m_RenderTexture.anisoLevel = 0;
+		m_RenderTexture.useMipMap = false;
+		m_RenderTexture.autoGenerateMips = false;*/
 		m_RenderTexture.Create();
+
 		m_MainCamera.targetTexture = m_RenderTexture;
 		m_MainCamera.Render(); //note that we're manually calling Render on the camera here! this renders 1 frame.
 
@@ -75,11 +90,56 @@ public class UseRenderingPlugin : MonoBehaviour
 
 	void Update() {
 		frameCount++;
-		if (frameCount % 4 != 0) return;
-		GetComponent<Camera>().Render(); //render the camera
+		UpdateRakNet();
+		
+		//make our camera render at 15fps:
+		if (frameCount % (60 / fpsForCam) == 0) {
+			GetComponent<Camera>().Render(); //render the camera
+		}
 	}
 
+	private ComputeShader asyncReadbackShader;
+	private int asyncReadbackKernel;
+
 	Texture2D toTexture2D(RenderTexture rTex)
+	{
+		// Create a new Texture2D object
+		Texture2D tex = new Texture2D(rTex.width, rTex.height, TextureFormat.RGBA32, false);
+
+		// Get the compute shader kernel
+		if (asyncReadbackShader == null) asyncReadbackShader = Resources.Load<ComputeShader>("AsyncReadbackShader");
+		if (asyncReadbackKernel == 0) asyncReadbackKernel = asyncReadbackShader.FindKernel("AsyncReadback");
+
+		// Set the active RenderTexture
+		RenderTexture.active = rTex;
+
+		// Create a RenderTexture for the result
+		RenderTexture rtResult = new RenderTexture(rTex.width, rTex.height, 0, RenderTextureFormat.ARGB32, RenderTextureReadWrite.Linear);
+		rtResult.enableRandomWrite = true;
+		rtResult.Create();
+
+		// Set the compute shader parameters
+		asyncReadbackShader.SetTexture(asyncReadbackKernel, "_MainTex", rTex);
+		asyncReadbackShader.SetTexture(asyncReadbackKernel, "Result", rtResult);
+
+		// Dispatch the compute shader
+		asyncReadbackShader.Dispatch(asyncReadbackKernel, rTex.width / 32, rTex.height / 32, 1);
+
+		// Read the data from the RenderTexture asynchronously
+		AsyncGPUReadback.Request(rtResult, 0, TextureFormat.RGBA32, (AsyncGPUReadbackRequest request) => {
+			if (request.hasError) {
+				Debug.LogError("GPU readback error!");
+			} else {
+				// Copy the data to the Texture2D
+				tex.LoadRawTextureData(request.GetData<byte>());
+				tex.Apply();
+			}
+		});
+
+		return tex;
+	}
+
+	Texture2D toTexture2DOld(RenderTexture rTex)
     {
         // ReadPixels looks at the active RenderTexture.
         RenderTexture.active = rTex;
@@ -94,7 +154,6 @@ public class UseRenderingPlugin : MonoBehaviour
 		});
 
         //tempTexture.ReadPixels(new Rect(0, 0, rTex.width, rTex.height), 0, 0);
-        //tempTexture.Apply(); //this would upload our image to the GPU again, but it isn't relevant for us.
         return tempTexture;
     }
 
@@ -102,30 +161,62 @@ public class UseRenderingPlugin : MonoBehaviour
 		while(true) 
 		{
 			yield return new WaitForEndOfFrame(); //wait until the frame is done
-			UpdateRakNet();
 
-			//frameCount++;
-			if (frameCount % 4 != 0) continue;
+			//make our camera render at 15fps:
+			if (!(frameCount % (60 / fpsForCam) == 0)) {
+				continue;
+			}
+
 			frameCount = 0;
 
 			if (!readFromGPU) {
 				//Get the render texture as a Texture2D so we can access the pixels
-				var texture = toTexture2D(GetComponent<Camera>().targetTexture);
+				var renderTexture = GetComponent<Camera>().targetTexture;
 
-				//convert the byte array to a float array:
-				byte[] data = texture.GetRawTextureData();
+				RenderTexture.active = renderTexture;
+				//byte[] pixelBytes = new byte[renderTexture.width * renderTexture.height * 4];
 
-				//Save the image for debugging:
-				//Debug.Log("data length: " + data.Length);
-				//byte[] bytes = texture.EncodeToPNG();
-				//System.IO.File.WriteAllBytes(Application.dataPath + "/../SavedScreen.png", bytes);
+				AsyncGPUReadback.Request(renderTexture, 0, TextureFormat.ARGB32, (AsyncGPUReadbackRequest request) => {
+					if (request.hasError) {
+						Debug.LogError("GPU readback error!");
+					} else {
+						var bytes = request.GetData<byte>().ToArray();
+						UploadFrame(bytes, bytes.Length);
+					}
+				});
 
-				//pass to plugin:
-				UploadFrame(data, data.Length);
+				//var texture = toTexture2DOld(renderTexture);
+
+				//Get the pixels from the texture:
+				//byte[] pixelsBytes = texture.GetRawTextureData();
+
+				//flip the image vertically:
+				/*for (int i = 0; i < texture.height / 2; i++) {
+					for (int j = 0; j < texture.width; j++) {
+						int index1 = (i * texture.width + j) * 4;
+						int index2 = ((texture.height - i - 1) * texture.width + j) * 4;
+						byte temp = pixelsBytes[index1];
+						pixelsBytes[index1] = pixelsBytes[index2];
+						pixelsBytes[index2] = temp;
+						temp = pixelsBytes[index1 + 1];
+						pixelsBytes[index1 + 1] = pixelsBytes[index2 + 1];
+						pixelsBytes[index2 + 1] = temp;
+						temp = pixelsBytes[index1 + 2];
+						pixelsBytes[index1 + 2] = pixelsBytes[index2 + 2];
+						pixelsBytes[index2 + 2] = temp;
+						temp = pixelsBytes[index1 + 3];
+						pixelsBytes[index1 + 3] = pixelsBytes[index2 + 3];
+						pixelsBytes[index2 + 3] = temp;
+					}
+				}*/
+				
+				//give frame to plugin:
+				//UploadFrame(pixelBytes, pixelBytes.Length); //20FPS-ish
 			}
 
+			//--Costs 100 FPS without GPU reading? 
 			GL.IssuePluginEvent(GetRenderEventFunc(), 1); //tell our plugin it can begin processing our frame, the 1 is the event
-			//it may be possible to just use the eventID as the channelID later on.
+															//it may be possible to just use the eventID as the channelID later on.
 		}
 	}
 }
