@@ -8,7 +8,7 @@
 
 struct StreamData {
 	unsigned int size;
-	unsigned char* data;
+	unsigned char* data = nullptr;
 	unsigned int width;
 	unsigned int height;
 
@@ -17,6 +17,10 @@ struct StreamData {
 		bitStream.Read(height);
 		bitStream.Read(size);
 
+		if (data != nullptr) {
+			delete[] data;
+		}
+
 		data = new unsigned char[size];
 
 		for (unsigned int i = 0; i < size; i++) {
@@ -24,6 +28,10 @@ struct StreamData {
 			bitStream.Read(temp);
 			data[i] = temp;
 		}
+	}
+
+	~StreamData() {
+		delete[] data;
 	}
 };
 

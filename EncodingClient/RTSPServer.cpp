@@ -25,14 +25,18 @@
 //Custom includes:
 #include "NetworkDefines.h"
 #include "StreamDataManager.h"
+#include "LockFreeQueue.h"
 
 using namespace RakNet;
+
+LockFreeQueue frameQueue(20, 2289828);
+char* data = new char[2289828];
 
 StreamDataManager sm();
 bool shouldTransmitRTSP = false;
 
 std::mutex dataMutex;
-char* data = new char[1];
+
 unsigned int size = 0;
 unsigned int width, height;
 
@@ -42,7 +46,7 @@ DWORD WINAPI SessionThreadHandler(LPVOID lpParam)
 
     char         RecvBuf[10000];                    // receiver buffer
     int          res;  
-    CStreamer    Streamer(Client, true);                  // our streamer for UDP/TCP based RTP transport
+    CStreamer    Streamer(Client, false);                  // our streamer for UDP/TCP based RTP transport
     CRtspSession RtspSession(Client,&Streamer);     // our threads RTSP session and state
     int          StreamID = 0;                      // the ID of the 2 JPEG samples streams which we support
     HANDLE       WaitEvents[2];                     // the waitable kernel objects of our session
@@ -55,7 +59,7 @@ DWORD WINAPI SessionThreadHandler(LPVOID lpParam)
     WaitEvents[1] = HTimer;
 
     // set frame rate timer
-    double T = 80.0;                                       // frame rate
+    double T = 66.66;                                       // frame rate in MS (25fps == 40.0, 15 == 66.66)
     int iT   = (int) T;
     const __int64 DueTime = - static_cast<const __int64>(iT) * 10 * 1000;
     ::SetWaitableTimer(HTimer,reinterpret_cast<const LARGE_INTEGER*>(&DueTime),iT,NULL,NULL,false);
@@ -87,15 +91,21 @@ DWORD WINAPI SessionThreadHandler(LPVOID lpParam)
             case WAIT_OBJECT_0 + 1 : 
             {
                 if (StreamingStarted) {
-                    if (!dataMutex.try_lock()) continue;
-                    Streamer.StreamImage(data, size, width, height);//RtspSession.GetStreamID());
-                  //Streamer.StreamAudio(RtspSession.GetStreamID());
-                    dataMutex.unlock();
+                    //if (!dataMutex.try_lock()) continue;
+
+                    int size;
+                    frameQueue.pop(data, size);
+
+                    Streamer.StreamImage(data, size, width, height);
+
+                    //dataMutex.unlock();
                 }
                 break;
             };
         };
     };
+
+    if (HTimer) CloseHandle(HTimer);
     closesocket(Client);
     return 0;
 };
@@ -178,17 +188,21 @@ void RakNetLoop() {
 
                 case (int)Messages::ID_IMAGE_DATA:
                 {
-                    if (dataMutex.try_lock()) {
-                        delete[] data;
+                    //continue;
+                    RakNet::BitStream is(packet->data, packet->length, false);
+                    MessageID msgID;
+                    StreamData newData;
+                    is.Read(msgID);
+                    newData.Deserialize(is);
 
-                        //std::cout << "img data wee" << std::endl;
-                        RakNet::BitStream is(packet->data, packet->length, false);
-                        MessageID msgID;
-                        StreamData newData;
-                        is.Read(msgID);
-                        newData.Deserialize(is);
+                    //Insert our image data into our lock-free queue:
+                    frameQueue.push((char*)newData.data, newData.size);
 
-                        //StreamDataManager::Instance().SetDataForStream(1, newData);
+                    width = newData.width;
+                    height = newData.height;
+
+                    /*if (dataMutex.try_lock()) {
+                        if (data) delete[] data;
 
                         if (size != newData.size)
                             data = new char[newData.size];
@@ -196,11 +210,8 @@ void RakNetLoop() {
                         data = (char*)newData.data;
                         size = newData.size;
 
-                        width = newData.width;
-                        height = newData.height;
-
                         dataMutex.unlock();
-                    }
+                    }*/
 
                     break;
                 }
@@ -221,10 +232,9 @@ void RakNetLoop() {
             }
 
             //peer->DeallocatePacket(packet);
-            
         }
 
-        RakSleep(10);
+        RakSleep(10); //RakNet thread does sleep to prevent high CPU usage, but it will run faster than RTSP can stream
     }
 
     RakPeerInterface::DestroyInstance(peer);
