@@ -50,6 +50,11 @@ private:
     int     m_SendIdx;
     bool    m_TCPTransport;
     SOCKET  m_Client;
+
+    //JPEG:
+    unsigned char* m_compressedImage = nullptr;
+    unsigned long m_compressedImageSize = 0;
+    unsigned long m_allocatedImageSize = 0;
 };
 
 #endif

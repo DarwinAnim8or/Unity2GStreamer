@@ -379,6 +379,15 @@ RGBAImage GenerateRandomRGBAImage(int width, int height) {
     return toReturn;
 }
 
+int framec = 0;
+std::ofstream file("timings.csv");
+//file << "Frame,Time taken in ms" << std::endl;
+
+void LogToCSV(double time) {
+    framec++;
+    file << framec << "," << time << std::endl;
+}
+
 #define PACKETSIZE 1400
 void CStreamer::StreamImage(char* data, unsigned int length, unsigned int width, unsigned int height) {
     try {
@@ -412,16 +421,22 @@ void CStreamer::StreamImage(char* data, unsigned int length, unsigned int width,
         //    }
         //}
 
+        auto t1 = std::chrono::high_resolution_clock::now();
+
         // Use libjpeg-turbo to encode this as a JPEG image:
-        unsigned char* compressedImage = nullptr;
-        unsigned long compressedImageSize = 0;
         tjhandle jpegCompressor = tjInitCompress();
 
         // Set JPEG quality as a constant or configuration parameter
         const int jpegQuality = 75;
 
+        //Because we keep the compressed image as a member, keep track of the largest size so we don't allocate a new one each frame
+        m_compressedImageSize = m_allocatedImageSize;
+
+        m_compressedImageSize = length;
+        m_compressedImage = (unsigned char*)data;
+
         // Compress image using libjpeg-turbo
-        int tjResult = tjCompress2(jpegCompressor, (const unsigned char*)data, width, 0, height, TJPF_ARGB, &compressedImage, &compressedImageSize, TJSAMP_420, jpegQuality, TJFLAG_FASTDCT);
+        int tjResult = tjCompress2(jpegCompressor, (const unsigned char*)data, width, 0, height, TJPF_ARGB, &m_compressedImage, &m_compressedImageSize, TJSAMP_420, jpegQuality, TJFLAG_FASTDCT);
 
         // Check for compression errors
         if (tjResult != 0) {
@@ -430,20 +445,29 @@ void CStreamer::StreamImage(char* data, unsigned int length, unsigned int width,
             return;
         }
 
+        //if the last size is greater than our stored size, update it:
+        m_allocatedImageSize = m_allocatedImageSize >= m_compressedImageSize ? m_allocatedImageSize : m_compressedImageSize;
+
         // Send compressed image over RTSP
+
         //For testing, write the jpeg to disk:
-        std::ofstream outFile("./test.jpg", std::ios_base::binary);
+        /*std::ofstream outFile("./test.jpg", std::ios_base::binary);
         if (outFile) {
-            for (unsigned long i = 0; i < compressedImageSize; i++) {
-                outFile << compressedImage[i];
+            for (unsigned long i = 0; i < m_compressedImageSize; i++) {
+                outFile << m_compressedImage[i];
             }
         }
 
-        outFile.close();
+        outFile.close();*/
+
+        auto t2 = std::chrono::high_resolution_clock::now();
+        auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1).count();
+
+        //LogToCSV(duration);
 
         //Parse the generated jpeg:
         JpegFrameParser parser;
-        parser.parse(compressedImage, compressedImageSize);
+        parser.parse(m_compressedImage, m_compressedImageSize);
 
         //Set our header and scan data:
         unsigned short tablesLength;
@@ -474,7 +498,7 @@ void CStreamer::StreamImage(char* data, unsigned int length, unsigned int width,
         }
 
         // Free memory allocated by libjpeg-turbo
-        tjFree(compressedImage);
+        //tjFree(m_compressedImage);
         tjDestroy(jpegCompressor);
 
         //Free memory by parser:
