@@ -16,8 +16,8 @@
 #include "CCTVServer.h"
 #include <d3d11.h>
 #include <d3d.h>
-
-//CCTVServer server;
+#include <thread>
+#include <future>
 
 // --------------------------------------------------------------------------
 // SetTimeFromUnity, an example function we export which is called by one of the scripts.
@@ -75,7 +75,7 @@ extern "C" void	UNITY_INTERFACE_EXPORT UNITY_INTERFACE_API UnityPluginLoad(IUnit
 	OnGraphicsDeviceEvent(kUnityGfxDeviceEventInitialize);
 
 	//Start our server
-	g_Server = new CCTVServer(2001);
+	g_Server = new CCTVServer(3001);
 }
 
 extern "C" void UNITY_INTERFACE_EXPORT UNITY_INTERFACE_API UnityPluginUnload()
@@ -190,14 +190,21 @@ extern "C" void UNITY_INTERFACE_EXPORT UNITY_INTERFACE_API SubmitRT(unsigned int
 }
 
 unsigned char* frameData = nullptr;
+unsigned char* flippedData = nullptr;
 int frameLength = 0;
 
 extern "C" void UNITY_INTERFACE_EXPORT UNITY_INTERFACE_API UploadFrame(unsigned char* data, int length) {
 	//if (frameData) delete[] frameData; //already done by EndModifyTexture
 
 	//Allocate the buffer:
-	if (length != frameLength)
+	if (length != frameLength) {
+		if (frameData) delete[] frameData;
+		if (flippedData) delete[] flippedData;
+		frameLength = length;
+
 		frameData = new unsigned char[length];
+		flippedData = new unsigned char[length];
+	}
 
 	//Copy our memory:
 	/*for (int i = 0; i < length; i++) {
@@ -227,7 +234,7 @@ static void OnRenderEvent(int eventID)
 	int bufferSize = width * height * 4; // RGBA format
 
 	if (g_ReadFromGPU) {
-		if (frameLength != bufferSize)
+		if (frameLength < bufferSize)
 			frameData = new unsigned char[bufferSize];
 
 		//Read texture from GPU memory:
@@ -235,11 +242,26 @@ static void OnRenderEvent(int eventID)
 	}
 	//else, the texture is already supplied to use by the "UploadFrame" function, which is called by the C# side in Unity itself.
 
-	//Broadcast our new image to everyone:
-	g_Server->SendNewFrameToEveryone((unsigned char*)frameData, bufferSize, width, height);
+	std::async(std::launch::async, [&]() {
+		//If we're in Direct3D mode, we need to flip the image vertically:
+		if (s_DeviceType == kUnityGfxRendererD3D11 || s_DeviceType == kUnityGfxRendererD3D12) {
+			//Flip the image vertically:
+			for (int y = 0; y < height; y++) {
+				for (int x = 0; x < width * 4; x++) {
+					flippedData[(height - y - 1) * width * 4 + x] = frameData[y * width * 4 + x];
+				}
+			}
 
-	//Delete the texture:
-	delete[] frameData;
+			//Copy the flipped image to our frameData:
+			memcpy(frameData, flippedData, bufferSize);
+		}
+
+		//Broadcast our new image to everyone:
+		g_Server->SendNewFrameToEveryone((unsigned char*)frameData, bufferSize, width, height);
+
+		//Delete the texture:
+		//delete[] frameData;
+	});
 }
 
 extern "C" UnityRenderingEvent UNITY_INTERFACE_EXPORT UNITY_INTERFACE_API GetRenderEventFunc()
