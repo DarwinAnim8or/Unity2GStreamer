@@ -104,6 +104,10 @@ void CCTVServer::SendNewFrameToEveryone(unsigned char* bytes, size_t size, int w
 	bitStream.Write<unsigned int>((unsigned int)size);
 	bitStream.WriteAlignedBytes(reinterpret_cast<const unsigned char*>(bytes), size);
 
+	/*for (int i = 0; i < size; i++) {
+		bitStream.Write(bytes[i]);
+	}*/
+
 	m_Peer->Send(&bitStream, PacketPriority::HIGH_PRIORITY, PacketReliability::UNRELIABLE, 0, UNASSIGNED_SYSTEM_ADDRESS, true);
 }
 

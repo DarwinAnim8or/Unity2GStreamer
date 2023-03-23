@@ -54,9 +54,7 @@ public:
 	virtual void* BeginModifyVertexBuffer(void* bufferHandle, size_t* outBufferSize);
 	virtual void EndModifyVertexBuffer(void* bufferHandle);
 
-	virtual void ReadTextureData(void* textureObject, unsigned char* buffer, int bufferSize) {
-		std::cout << "Unimplemented function! ReadTextureData\n";
-	}
+	virtual void ReadTextureData(void* textureObject, unsigned char* buffer, int bufferSize);
 
 private:
 	void CreateResources();
@@ -311,6 +309,31 @@ void RenderAPI_OpenGLCoreES::EndModifyVertexBuffer(void* bufferHandle)
 	glBindBuffer(GL_ARRAY_BUFFER, (GLuint)(size_t)bufferHandle);
 	glUnmapBuffer(GL_ARRAY_BUFFER);
 #	endif
+}
+
+/*
+	Note that this function assumes that the texture is in RGBA format, so if the texture is in a different format, the color information may not be read correctly.
+	Also, the function does not create a staging texture like the DirectX version, so it may not be as efficient in terms of performance.
+*/
+void RenderAPI_OpenGLCoreES::ReadTextureData(void* textureObject, unsigned char* buffer, int bufferSize) {
+	GLuint texture = *(GLuint*)textureObject;
+
+	// Get the width and height of the texture
+	GLint width, height;
+	glBindTexture(GL_TEXTURE_2D, texture);
+	glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &width);
+	glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &height);
+	glBindTexture(GL_TEXTURE_2D, 0);
+
+	// Make sure the buffer is large enough to hold the texture data
+	int requiredSize = width * height * 4;
+	if (bufferSize < requiredSize)
+		return;
+
+	// Read the texture data into the buffer
+	glBindTexture(GL_TEXTURE_2D, texture);
+	glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_BYTE, buffer);
+	glBindTexture(GL_TEXTURE_2D, 0);
 }
 
 #endif // #if SUPPORT_OPENGL_UNIFIED
