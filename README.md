@@ -1,14 +1,21 @@
-# Unity2GStreamer
+# UnityLiveStreamingPlugin
 The goal of this plugin is to create a RenderTexture for Unity to use, then render camera(s) to it. 
-Once the frame is completed, we will take the generated texture and pass it as a frame to gstreamer, which will then in turn encode it and generate an RTSP stream from it.
+Once the frame is completed, we will take the generated texture and pass it as a frame to an encoding client, which will then in turn encode it and generate an RTSP stream from it.
 
-The plugin and gstreamer instances are seperated by a network connection, provided by [RakNet](https://github.com/LBBStudios/RakNet).
-This is to *allow* for the computer rendering your game to be unburdened by encoding your video stream.
+The plugin and encoding client are seperated by a network connection, provided by [RakNet](https://github.com/LBBStudios/RakNet).
+This is to *allow* for the computer rendering your game to be unburdened by encoding your video stream. There is of course, nothing stopping you from using it on localhost.
 
 ## Cloning
 If you clone this repository and git didn't clone the submodules, you need to run the following command:
 
 ```git submodule update --init --recursive```
+
+## Requirements
+This project has a few dependencies which need to be installed manually. In order to build this project, you will need:
+* [Unity](https://store.unity.com/#plans-individual)
+* [Visual Studio 2022](https://visualstudio.microsoft.com/downloads/)
+* [CMake](https://cmake.org/download/)
+* [libjpeg-turbo](https://sourceforge.net/projects/libjpeg-turbo/files/2.1.5.1/)
 
 ## Building The Client (Encoding) side
 You can download [the required version from libjpeg-turbo here](https://sourceforge.net/projects/libjpeg-turbo/files/2.1.5.1/)
@@ -22,10 +29,7 @@ For Linux, the recommended setup, run the following scripts in order:
 The server is only confirmed to work on Windows. Use the supplied solution file in PluginSource\projects\VisualStudio2015 to compile the project.
 The resulting .DLL file should be in the UnityProject for testing. The Unity project also serves as a test / minimal setup and contains the needed C# script to make the plugin work. 
 
-### Step 1: Install CMake
-[Download CMake](https://cmake.org/download/)
-
-### Step 2: Configure RakNet
+### Step 1: Configure RakNet
 * Open cmake-gui
 * Set "Where to build the source" to the 3rdparty/RakNet folder
 * Set the "Where to build the binaries" to the 3rdparty/RakNet/build folder (created if needed)
