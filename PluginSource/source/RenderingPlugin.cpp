@@ -242,7 +242,7 @@ static void OnRenderEvent(int eventID)
 	}
 	//else, the texture is already supplied to use by the "UploadFrame" function, which is called by the C# side in Unity itself.
 
-	std::async(std::launch::async, [&]() {
+	//std::async(std::launch::async, [&]() {
 		//If we're in Direct3D mode, we need to flip the image vertically:
 		if (s_DeviceType == kUnityGfxRendererD3D11 || s_DeviceType == kUnityGfxRendererD3D12) {
 			//Flip the image vertically:
@@ -266,7 +266,7 @@ static void OnRenderEvent(int eventID)
 
 		//Delete the texture:
 		//delete[] frameData;
-	});
+	//});
 }
 
 extern "C" UnityRenderingEvent UNITY_INTERFACE_EXPORT UNITY_INTERFACE_API GetRenderEventFunc()

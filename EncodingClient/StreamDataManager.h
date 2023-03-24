@@ -31,7 +31,7 @@ struct StreamData {
 	}
 
 	~StreamData() {
-		delete[] data;
+		delete[] data; //commento ut if using the std::mutex method instead
 	}
 };
 

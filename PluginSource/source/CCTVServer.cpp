@@ -108,7 +108,7 @@ void CCTVServer::SendNewFrameToEveryone(unsigned char* bytes, size_t size, int w
 		bitStream.Write(bytes[i]);
 	}*/
 
-	m_Peer->Send(&bitStream, PacketPriority::HIGH_PRIORITY, PacketReliability::UNRELIABLE, 0, UNASSIGNED_SYSTEM_ADDRESS, true);
+	m_Peer->Send(&bitStream, PacketPriority::IMMEDIATE_PRIORITY, PacketReliability::UNRELIABLE, 0, UNASSIGNED_SYSTEM_ADDRESS, true);
 }
 
 void CCTVServer::SendNewFrameToRemoteGstreamer(RakNetGUID client, const char* bytes, size_t size) {

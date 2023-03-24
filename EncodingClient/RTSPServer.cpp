@@ -46,7 +46,7 @@ DWORD WINAPI SessionThreadHandler(LPVOID lpParam)
 
     char         RecvBuf[10000];                    // receiver buffer
     int          res;  
-    CStreamer    Streamer(Client, false);                  // our streamer for UDP/TCP based RTP transport
+    CStreamer    Streamer(Client, true);                  // our streamer for UDP/TCP based RTP transport
     CRtspSession RtspSession(Client,&Streamer);     // our threads RTSP session and state
     int          StreamID = 0;                      // the ID of the 2 JPEG samples streams which we support
     HANDLE       WaitEvents[2];                     // the waitable kernel objects of our session
@@ -130,6 +130,8 @@ void RakNetLoop() {
     RakNetGUID serverGUID;
     StreamSettings sSettings;
 
+    bool skip = true;
+
     bool run = true;
     while (run) {
         for (packet = peer->Receive(); packet; peer->DeallocatePacket(packet), packet = peer->Receive()) {
@@ -188,7 +190,9 @@ void RakNetLoop() {
 
                 case (int)Messages::ID_IMAGE_DATA:
                 {
-                    //continue;
+                    skip = !skip;
+                    //if (skip) continue;
+
                     RakNet::BitStream is(packet->data, packet->length, false);
                     MessageID msgID;
                     StreamData newData;
