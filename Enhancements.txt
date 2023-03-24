@@ -1,0 +1,7 @@
+This is a list of a few enhancements that still could or need to be made:
+
+-Add NVenc H264 support so we can listen to the codec sent by the server
+-Add the ability to start a new EncodingClient for a different camera (plugin->client)
+
+-Fix bug where the CCTVServer doesn't -really- listen to the port supplied as an argument in it's constructor. 
+-Fix it so that not all frames go to all clients

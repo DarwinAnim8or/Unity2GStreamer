@@ -253,7 +253,12 @@ static void OnRenderEvent(int eventID)
 			}
 
 			//Copy the flipped image to our frameData:
-			memcpy(frameData, flippedData, bufferSize);
+			//memcpy(frameData, flippedData, bufferSize);
+
+			g_Server->SendNewFrameToEveryone(flippedData, bufferSize, width, height);
+
+			//delete[] flippedData;
+			return;
 		}
 
 		//Broadcast our new image to everyone:
