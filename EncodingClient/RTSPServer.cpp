@@ -34,11 +34,14 @@ char* data = new char[2289828];
 
 StreamDataManager sm();
 bool shouldTransmitRTSP = false;
+unsigned short rtspPort = 8554;
 
 std::mutex dataMutex;
 
 unsigned int size = 0;
 unsigned int width, height;
+
+bool run = true;
 
 DWORD WINAPI SessionThreadHandler(LPVOID lpParam)
 {
@@ -132,7 +135,6 @@ void RakNetLoop() {
 
     bool skip = true;
 
-    bool run = true;
     while (run) {
         for (packet = peer->Receive(); packet; peer->DeallocatePacket(packet), packet = peer->Receive()) {
             //Check for packets from RakNet :
@@ -184,6 +186,7 @@ void RakNetLoop() {
                     //TODO: change our settings based on what we just received
                     //StreamDataManager::Instance().AddStream(1);
                     shouldTransmitRTSP = true;
+                    rtspPort = (unsigned short)sSettings.port;
 
                     break;
                 }
@@ -217,6 +220,13 @@ void RakNetLoop() {
                         dataMutex.unlock();
                     }*/
 
+                    break;
+                }
+
+                case (int)Messages::ID_CREATE_NEW_CHANNEL:
+                {
+                    std::string cmd = "start EncodingClient.exe";
+                    system(cmd.c_str());
                     break;
                 }
 
@@ -258,19 +268,22 @@ int main(int argc, char** argv) {
 
     ServerAddr.sin_family      = AF_INET;   
     ServerAddr.sin_addr.s_addr = INADDR_ANY;   
-    ServerAddr.sin_port        = htons(8554);                 // listen on RTSP port 8554
+    ServerAddr.sin_port        = htons(rtspPort);                 // listen on RTSP port 8554
     MasterSocket               = socket(AF_INET,SOCK_STREAM,0);   
 
-    // bind our master socket to the RTSP port and listen for a client connection
-    if (bind(MasterSocket,(sockaddr*)&ServerAddr,sizeof(ServerAddr)) != 0) return 0;  
-    if (listen(MasterSocket,5) != 0) return 0;
+    bool hasSetupRTSP = false;
 
     std::thread t{ RakNetLoop };
 
-    bool run = true;
-
     while (run) {
         if (!shouldTransmitRTSP) continue;
+        else if (!hasSetupRTSP) {
+            // bind our master socket to the RTSP port and listen for a client connection
+            if (bind(MasterSocket, (sockaddr*)&ServerAddr, sizeof(ServerAddr)) != 0) return 0;
+            if (listen(MasterSocket, 5) != 0) return 0;
+
+            hasSetupRTSP = true; //make sure we don't set it up a second time
+        }
 
         ClientSocket = accept(MasterSocket, (struct sockaddr*)&ClientAddr, &ClientAddrLen);
         CreateThread(NULL, 0, SessionThreadHandler, &ClientSocket, 0, &TID);
