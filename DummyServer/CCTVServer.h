@@ -1,7 +1,7 @@
 #pragma once
 #include <iostream>
 #include <string>
-#include <map>
+#include <vector>
 
 //RakNet includes:
 #include "RakPeerInterface.h"
@@ -15,6 +15,7 @@ enum class Messages : unsigned int {
 	ID_HANDSHAKE_RESPONSE,
 	ID_IMAGE_DATA, //new frame data for us to encode,
 	ID_READY_FOR_DATA, //empty packet outside of the ID, just to show that we're ready for incoming image data.
+	ID_CREATE_NEW_CHANNEL //empty packet outside of the ID + channel ID, tells us to start a new EncodingClient for a new channel.
 };
 
 struct StreamSettings {
@@ -26,7 +27,7 @@ struct StreamSettings {
 using namespace RakNet;
 
 struct RGBAImage {
-	unsigned char* data = nullptr;
+	std::string data = "";
 	unsigned int size = 0;
 };
 
@@ -39,14 +40,17 @@ public:
 
 	void SendHandshakeResponse(bool success, RakNetGUID& clientGUID);
 	void SendNewFrameToEveryone(unsigned char* bytes, size_t size, int width, int height);
-	void SendNewFrameToRemoteGstreamer(RakNetGUID client, const char* bytes, size_t size);
-	void SendStreamSettings(const StreamSettings& settings);
+	void SendNewFrameToSingleEncodingClient(int channelID, unsigned char* bytes, size_t size, int width, int height);
+	void SendStreamSettings(RakNetGUID& guid, const StreamSettings& settings);
+	void SendCreateNewChannel();
+
 	void Disconnect(RakNetGUID client);
 
 	RGBAImage GenerateRandomRGBAImage(int width, int height);
 
 private:
-	std::map<uint32_t, RakNetGUID> m_Clients;
+	std::vector<RakNetGUID> m_Clients;
+	int m_LastClientChannelID = 0;
 	int m_Port;
 
 	RakNet::RakPeerInterface* m_Peer;
@@ -54,4 +58,5 @@ private:
 	Packet* m_Packet;
 
 	int frameCount = 0;
+	int m_lastRTSPPort = 8554;
 };
