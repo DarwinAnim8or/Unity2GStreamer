@@ -43,6 +43,58 @@ unsigned int width, height;
 
 bool run = true;
 
+//If we're on Win32, we'll include our minidump writer
+#ifdef WIN32
+#include <Windows.h>
+#include <Dbghelp.h>
+
+void make_minidump(EXCEPTION_POINTERS* e) {
+    auto hDbgHelp = LoadLibraryA("dbghelp");
+    if (hDbgHelp == nullptr)
+        return;
+    auto pMiniDumpWriteDump = (decltype(&MiniDumpWriteDump))GetProcAddress(hDbgHelp, "MiniDumpWriteDump");
+    if (pMiniDumpWriteDump == nullptr)
+        return;
+
+    char name[MAX_PATH];
+    {
+        auto nameEnd = name + GetModuleFileNameA(GetModuleHandleA(0), name, MAX_PATH);
+        SYSTEMTIME t;
+        GetSystemTime(&t);
+        wsprintfA(nameEnd - strlen(".exe"),
+            "_%4d%02d%02d_%02d%02d%02d.dmp",
+            t.wYear, t.wMonth, t.wDay, t.wHour, t.wMinute, t.wSecond);
+    }
+
+    auto hFile = CreateFileA(name, GENERIC_WRITE, FILE_SHARE_READ, 0, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, 0);
+    if (hFile == INVALID_HANDLE_VALUE)
+        return;
+
+    MINIDUMP_EXCEPTION_INFORMATION exceptionInfo;
+    exceptionInfo.ThreadId = GetCurrentThreadId();
+    exceptionInfo.ExceptionPointers = e;
+    exceptionInfo.ClientPointers = FALSE;
+
+    auto dumped = pMiniDumpWriteDump(
+        GetCurrentProcess(),
+        GetCurrentProcessId(),
+        hFile,
+        MINIDUMP_TYPE(MiniDumpWithIndirectlyReferencedMemory | MiniDumpScanMemory),
+        e ? &exceptionInfo : nullptr,
+        nullptr,
+        nullptr);
+
+    CloseHandle(hFile);
+
+    return;
+}
+
+LONG CALLBACK unhandled_handler(EXCEPTION_POINTERS* e) {
+    make_minidump(e);
+    return EXCEPTION_CONTINUE_SEARCH;
+}
+#endif
+
 DWORD WINAPI SessionThreadHandler(LPVOID lpParam)
 {
     SOCKET Client = *(SOCKET*)lpParam;
@@ -114,6 +166,11 @@ DWORD WINAPI SessionThreadHandler(LPVOID lpParam)
 };
 
 void RakNetLoop() {
+    //If we're Win32, we'll set this so our exe will write a minidump when it crashes.
+#ifdef WIN32
+    SetUnhandledExceptionFilter(unhandled_handler);
+#endif
+
     //RakNet variables:
     RakPeerInterface* peer = RakPeerInterface::GetInstance();
     Packet* packet;
@@ -225,7 +282,7 @@ void RakNetLoop() {
 
                 case (int)Messages::ID_CREATE_NEW_CHANNEL:
                 {
-                    std::string cmd = "start EncodingClient.exe";
+                    std::string cmd = "start ./EncodingClient.exe " + std::to_string(rtspPort + 1);
                     system(cmd.c_str());
                     break;
                 }
@@ -268,7 +325,12 @@ int main(int argc, char** argv) {
 
     ServerAddr.sin_family      = AF_INET;   
     ServerAddr.sin_addr.s_addr = INADDR_ANY;   
-    ServerAddr.sin_port        = htons(rtspPort);                 // listen on RTSP port 8554
+
+    if (argc == 2)
+        ServerAddr.sin_port = htons((unsigned short)std::stoi(argv[1]));                 // listen on RTSP port 8554
+    else
+        ServerAddr.sin_port = htons(8554);
+
     MasterSocket               = socket(AF_INET,SOCK_STREAM,0);   
 
     bool hasSetupRTSP = false;
