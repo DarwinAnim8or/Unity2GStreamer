@@ -255,7 +255,9 @@ static void OnRenderEvent(int eventID)
 			//Copy the flipped image to our frameData:
 			//memcpy(frameData, flippedData, bufferSize);
 
-			g_Server->SendNewFrameToEveryone(flippedData, bufferSize, width, height);
+			//g_Server->SendNewFrameToEveryone(flippedData, bufferSize, width, height);
+
+			g_Server->SendNewFrameToSingleEncodingClient(eventID, flippedData, bufferSize, width, height);
 
 			//delete[] flippedData;
 			return;
@@ -272,4 +274,8 @@ static void OnRenderEvent(int eventID)
 extern "C" UnityRenderingEvent UNITY_INTERFACE_EXPORT UNITY_INTERFACE_API GetRenderEventFunc()
 {
 	return OnRenderEvent;
+}
+
+extern "C" void UNITY_INTERFACE_EXPORT UNITY_INTERFACE_API CreateNewEncodingClient() {
+	g_Server->SendCreateNewChannel();
 }

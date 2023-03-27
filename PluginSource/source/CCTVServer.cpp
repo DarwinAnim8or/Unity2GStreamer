@@ -1,7 +1,7 @@
 #include "CCTVServer.h"
 
 //IMPORTANT: This should stay in sync with the client project. Increment the netversion if you make changes to this enum or the serialization of packets.
-int NET_VERSION = 3;
+int NET_VERSION = 4;
 
 CCTVServer::CCTVServer(int port) {
 	m_Port = port;
@@ -61,14 +61,16 @@ void CCTVServer::Update() {
 		SendHandshakeResponse(netVersion == NET_VERSION, m_Packet->guid);
 
 		if (netVersion == NET_VERSION) {
-			m_Clients.insert(std::make_pair(m_Packet->systemAddress.GetPort(), m_Packet->guid));
-
 			//TEMP: Tell them to start streaming:
 			StreamSettings ss;
-			ss.codec = "h264";
+			ss.codec = "mjpeg";
 			ss.useHardwareEncoder = false;
-			ss.port = 8558;
-			SendStreamSettings(ss);
+			ss.port = m_lastRTSPPort;
+			SendStreamSettings(m_Packet->guid, ss);
+
+			m_lastRTSPPort++;
+
+			m_Clients.push_back(m_Packet->guid);
 		}
 
 		break;
@@ -108,37 +110,46 @@ void CCTVServer::SendNewFrameToEveryone(unsigned char* bytes, size_t size, int w
 		bitStream.Write(bytes[i]);
 	}*/
 
-	m_Peer->Send(&bitStream, PacketPriority::IMMEDIATE_PRIORITY, PacketReliability::UNRELIABLE, 0, UNASSIGNED_SYSTEM_ADDRESS, true);
+	m_Peer->Send(&bitStream, PacketPriority::IMMEDIATE_PRIORITY, PacketReliability::UNRELIABLE, 1, UNASSIGNED_SYSTEM_ADDRESS, true);
 }
 
-void CCTVServer::SendNewFrameToRemoteGstreamer(RakNetGUID client, const char* bytes, size_t size) {
+void CCTVServer::SendNewFrameToSingleEncodingClient(int channelID, unsigned char* bytes, size_t size, int width, int height) {
+	//Figure out who to send this to:
+	RakNetGUID guid = m_Clients[channelID];
+
+	//Create our packet:
 	BitStream bitStream;
 	bitStream.Write((MessageID)Messages::ID_IMAGE_DATA);
+	bitStream.Write<unsigned int>(width);
+	bitStream.Write<unsigned int>(height);
 	bitStream.Write<unsigned int>((unsigned int)size);
-
-	for (size_t i = 0; i < size; i++) {
-		bitStream.Write(bytes[i]);
-	}
-
-	//TODO: Figure out which level of reliability is needed
-	//TODO: Implement a system that uses the orderingchannel, rather than TCP-like everything being channel 0.
-	m_Peer->Send(&bitStream, PacketPriority::HIGH_PRIORITY, PacketReliability::UNRELIABLE, 0, client, false);
+	bitStream.WriteAlignedBytes(reinterpret_cast<const unsigned char*>(bytes), size);
+	m_Peer->Send(&bitStream, PacketPriority::IMMEDIATE_PRIORITY, PacketReliability::UNRELIABLE, 1, guid, false);
 }
 
-void CCTVServer::SendStreamSettings(const StreamSettings& settings) {
+void CCTVServer::SendStreamSettings(RakNetGUID& guid, const StreamSettings& settings) {
 	RakNet::BitStream bs;
 	bs.Write((MessageID)Messages::ID_STREAM_SETTINGS);
 	bs.Write(settings.port);
 	bs.Write(settings.codec);
 	bs.Write(settings.useHardwareEncoder);
-	m_Peer->Send(&bs, PacketPriority::IMMEDIATE_PRIORITY, PacketReliability::RELIABLE_ORDERED, 0, RakNet::UNASSIGNED_RAKNET_GUID, true);
+	m_Peer->Send(&bs, PacketPriority::IMMEDIATE_PRIORITY, PacketReliability::RELIABLE_ORDERED, 0, guid, false);
+}
+
+void CCTVServer::SendCreateNewChannel() {
+	//Simply use our first connection to tell them to make a new channel:
+	RakNetGUID guid = m_Clients[m_Clients.size()];
+	RakNet::BitStream bs;
+	bs.Write((MessageID)Messages::ID_CREATE_NEW_CHANNEL);
+	m_Peer->Send(&bs, PacketPriority::HIGH_PRIORITY, PacketReliability::RELIABLE_ORDERED, 0, guid, false);
 }
 
 void CCTVServer::Disconnect(RakNetGUID client) {
 	//this "kicks" a client from our server:
 	for (auto& addr : m_Clients) {
-		if (addr.second == client) {
-			m_Peer->CloseConnection(addr.second, true);
+		if (addr == client) {
+			m_Peer->CloseConnection(addr, true);
+			addr = RakNetGUID();
 		}
 	}
 }
