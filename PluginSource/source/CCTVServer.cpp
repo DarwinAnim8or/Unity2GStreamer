@@ -10,7 +10,7 @@ CCTVServer::CCTVServer(int port) {
 	m_Peer = RakNet::RakPeerInterface::GetInstance();
 
 	//Configure our Socket:
-	m_Socket.port = 3001; //3001 was chosen because ports under 2048 may be set up under Linux as reserved for 'root' only.
+	m_Socket.port = m_Port; //3001 was chosen because ports under 2048 may be set up under Linux as reserved for 'root' only.
 	m_Socket.socketFamily = AF_INET; //IPv4, since we're on a LAN anyway
 
 	//Startup:
