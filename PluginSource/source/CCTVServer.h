@@ -44,8 +44,8 @@ public:
 	void SendStreamSettings(RakNetGUID& guid, const StreamSettings& settings);
 	void SendCreateNewChannel();
 
-
 	void Disconnect(RakNetGUID client);
+	void ClearAllClients();
 
 	RGBAImage GenerateRandomRGBAImage(int width, int height);
 

@@ -279,3 +279,7 @@ extern "C" UnityRenderingEvent UNITY_INTERFACE_EXPORT UNITY_INTERFACE_API GetRen
 extern "C" void UNITY_INTERFACE_EXPORT UNITY_INTERFACE_API CreateNewEncodingClient() {
 	g_Server->SendCreateNewChannel();
 }
+
+extern "C" void UNITY_INTERFACE_EXPORT UNITY_INTERFACE_API ClearAllClients() {
+	g_Server->ClearAllClients();
+}

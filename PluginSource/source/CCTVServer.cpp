@@ -1,4 +1,6 @@
 #include "CCTVServer.h"
+#include <RakSleep.h>
+#include <future>
 
 //IMPORTANT: This should stay in sync with the client project. Increment the netversion if you make changes to this enum or the serialization of packets.
 int NET_VERSION = 4;
@@ -137,11 +139,14 @@ void CCTVServer::SendStreamSettings(RakNetGUID& guid, const StreamSettings& sett
 }
 
 void CCTVServer::SendCreateNewChannel() {
-	//Simply use our first connection to tell them to make a new channel:
-	RakNetGUID guid = m_Clients[m_Clients.size()];
-	RakNet::BitStream bs;
-	bs.Write((MessageID)Messages::ID_CREATE_NEW_CHANNEL);
-	m_Peer->Send(&bs, PacketPriority::HIGH_PRIORITY, PacketReliability::RELIABLE_ORDERED, 0, guid, false);
+	std::async(std::launch::async, [&]() {
+		//Simply use our first connection to tell them to make a new channel
+		while (m_Clients.size() == 0) RakSleep(30);
+		RakNetGUID guid = m_Clients[0];
+		RakNet::BitStream bs;
+		bs.Write((MessageID)Messages::ID_CREATE_NEW_CHANNEL);
+		m_Peer->Send(&bs, PacketPriority::HIGH_PRIORITY, PacketReliability::RELIABLE_ORDERED, 0, guid, false);
+	});
 }
 
 void CCTVServer::Disconnect(RakNetGUID client) {
@@ -152,6 +157,14 @@ void CCTVServer::Disconnect(RakNetGUID client) {
 			addr = RakNetGUID();
 		}
 	}
+}
+
+void CCTVServer::ClearAllClients() {
+	for (auto& addr : m_Clients) {
+		m_Peer->CloseConnection(addr, true);
+	}
+
+	m_Clients.clear();
 }
 
 RGBAImage CCTVServer::GenerateRandomRGBAImage(int width, int height) {
