@@ -7,6 +7,8 @@
 
 #include <thread>
 #include <future>
+#include <vector>
+#include <fstream>
 
 #include <Winsock2.h>
 #include <windows.h>  
@@ -29,14 +31,14 @@
 
 using namespace RakNet;
 
-LockFreeQueue frameQueue(20, 2289828);
-char* data = new char[2289828];
+LockFreeQueue frameQueue(2, 1920000);
+LockFreeQueue frameQueue2(2, 1920000);
+LockFreeQueue frameQueue3(2, 1920000);
+//char* data = new char[2289828];
 
 StreamDataManager sm();
 bool shouldTransmitRTSP = false;
 unsigned short rtspPort = 8554;
-
-std::mutex dataMutex;
 
 unsigned int size = 0;
 unsigned int width, height;
@@ -98,6 +100,7 @@ LONG CALLBACK unhandled_handler(EXCEPTION_POINTERS* e) {
 DWORD WINAPI SessionThreadHandler(LPVOID lpParam)
 {
     SOCKET Client = *(SOCKET*)lpParam;
+    char* data = new char[2289828];
 
     char         RecvBuf[10000];                    // receiver buffer
     int          res;  
@@ -149,7 +152,16 @@ DWORD WINAPI SessionThreadHandler(LPVOID lpParam)
                     //if (!dataMutex.try_lock()) continue;
 
                     int size;
-                    frameQueue.pop(data, size);
+                    StreamID = RtspSession.GetStreamID();
+                    if (StreamID == 0) {
+                        frameQueue.pop(data, size);
+                    } else if (StreamID == 1) {
+                        frameQueue2.pop(data, size);
+                    } else if (StreamID == 2) {
+                        frameQueue3.pop(data, size);
+                    }
+                    
+                    //frameQueue.pop(data, size);
 
                     Streamer.StreamImage(data, size, width, height);
 
@@ -190,7 +202,7 @@ void RakNetLoop() {
     RakNetGUID serverGUID;
     StreamSettings sSettings;
 
-    bool skip = true;
+    bool skip = false;
 
     while (run) {
         for (packet = peer->Receive(); packet; peer->DeallocatePacket(packet), packet = peer->Receive()) {
@@ -250,7 +262,7 @@ void RakNetLoop() {
 
                 case (int)Messages::ID_IMAGE_DATA:
                 {
-                    skip = !skip;
+                    //skip = !skip;
                     //if (skip) continue;
 
                     RakNet::BitStream is(packet->data, packet->length, false);
@@ -260,10 +272,38 @@ void RakNetLoop() {
                     newData.Deserialize(is);
 
                     //Insert our image data into our lock-free queue:
-                    frameQueue.push((char*)newData.data, newData.size);
+                    //frameQueue.push((char*)newData.data, newData.size);
+
+                    if (newData.channelID == 1) {
+                        frameQueue.push((char*)newData.data, newData.size);
+                    } else if (newData.channelID == 2) {
+                        frameQueue2.push((char*)newData.data, newData.size);
+                    } else if (newData.channelID == 3) {
+                        frameQueue3.push((char*)newData.data, newData.size);
+                    }
+
+                    std::ofstream file("./frame.bin", std::ios_base::binary);
+                    for (int i = 0; i < newData.size; i++) {
+                        file << newData.data[i];
+                    }
+
+                    file.close();
+
 
                     width = newData.width;
                     height = newData.height;
+
+                    /*if (g_dataMutex[newData.channelID].try_lock()) {
+                        if (data[newData.channelID]) delete[] data[newData.channelID];
+
+                        if (size != newData.size)
+                            data[newData.channelID] = new char[newData.size];
+
+                        data[newData.channelID] = (char*)newData.data;
+                        size = newData.size;
+
+                        g_dataMutex[newData.channelID].unlock();
+                    }*/
 
                     /*if (dataMutex.try_lock()) {
                         if (data) delete[] data;

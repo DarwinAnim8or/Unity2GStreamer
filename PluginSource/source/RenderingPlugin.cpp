@@ -193,7 +193,7 @@ unsigned char* frameData = nullptr;
 unsigned char* flippedData = nullptr;
 int frameLength = 0;
 
-extern "C" void UNITY_INTERFACE_EXPORT UNITY_INTERFACE_API UploadFrame(unsigned char* data, int length) {
+extern "C" void UNITY_INTERFACE_EXPORT UNITY_INTERFACE_API UploadFrame(unsigned char* data, int length, int channelID) {
 	//if (frameData) delete[] frameData; //already done by EndModifyTexture
 
 	//Allocate the buffer:
@@ -212,6 +212,24 @@ extern "C" void UNITY_INTERFACE_EXPORT UNITY_INTERFACE_API UploadFrame(unsigned 
 	}*/
 
 	memcpy(frameData, data, length);
+
+	//Send it out:
+	int width = g_TextureWidth;
+	int height = g_TextureHeight;
+	int bufferSize = width * height * 4; // RGBA format
+
+	if (s_DeviceType == kUnityGfxRendererD3D11 || s_DeviceType == kUnityGfxRendererD3D12) {
+		//Flip the image vertically:
+		for (int y = 0; y < height; y++) {
+			for (int x = 0; x < width * 4; x++) {
+				flippedData[(height - y - 1) * width * 4 + x] = frameData[y * width * 4 + x];
+			}
+		}
+
+		//g_Server->SendNewFrameToSingleEncodingClient(channelID, flippedData, bufferSize, width, height);
+		g_Server->SendNewFrameToEveryone(flippedData, bufferSize, width, height, channelID);
+		return;
+	}
 }
 
 extern "C" void UNITY_INTERFACE_EXPORT UNITY_INTERFACE_API UpdateRakNet() {
@@ -264,7 +282,7 @@ static void OnRenderEvent(int eventID)
 		}
 
 		//Broadcast our new image to everyone:
-		g_Server->SendNewFrameToEveryone((unsigned char*)frameData, bufferSize, width, height);
+		g_Server->SendNewFrameToEveryone((unsigned char*)frameData, bufferSize, width, height, eventID);
 
 		//Delete the texture:
 		//delete[] frameData;

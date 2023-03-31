@@ -39,7 +39,7 @@ public:
 	void Update(); //updates our rakPeer and checks for new messages from clients
 
 	void SendHandshakeResponse(bool success, RakNetGUID& clientGUID);
-	void SendNewFrameToEveryone(unsigned char* bytes, size_t size, int width, int height);
+	void SendNewFrameToEveryone(unsigned char* bytes, size_t size, int width, int height, int channelID);
 	void SendNewFrameToSingleEncodingClient(int channelID, unsigned char* bytes, size_t size, int width, int height);
 	void SendStreamSettings(RakNetGUID& guid, const StreamSettings& settings);
 	void SendCreateNewChannel();
