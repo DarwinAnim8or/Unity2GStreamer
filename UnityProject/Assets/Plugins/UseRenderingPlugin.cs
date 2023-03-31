@@ -25,24 +25,24 @@ public class UseRenderingPlugin : MonoBehaviour
 #if (UNITY_IOS || UNITY_TVOS || UNITY_WEBGL) && !UNITY_EDITOR
 	[DllImport ("__Internal")]
 #else
-	[DllImport ("Unity2GStreamerPlugin")]
+	[DllImport ("UnityLiveStreamingPlugin")]
 #endif
 	private static extern void SetTimeFromUnity(float t); //example from Unity, keeps the plugin loaded
 
 	//import our dll's functions:
-	[DllImport("Unity2GStreamerPlugin")] 
+	[DllImport("UnityLiveStreamingPlugin")] 
 	private static extern void SetTextureFromUnity(System.IntPtr texture, int w, int h); //tells the plugin where our rendertexture is
 
-	[DllImport("Unity2GStreamerPlugin")] 
+	[DllImport("UnityLiveStreamingPlugin")] 
 	private static extern IntPtr GetRenderEventFunc(); //handles the received frame
 
-	[DllImport("Unity2GStreamerPlugin")]
+	[DllImport("UnityLiveStreamingPlugin")]
 	private static extern void UpdateRakNet(); //handles our networking
 
-	[DllImport("Unity2GStreamerPlugin")]
-	private static extern void UploadFrame(byte[] data, int length);
+	[DllImport("UnityLiveStreamingPlugin")]
+	private static extern void UploadFrame(byte[] data, int length, int channelID);
 
-	[DllImport("Unity2GStreamerPlugin")]
+	[DllImport("UnityLiveStreamingPlugin")]
 	private static extern void SetReadFromGPU(bool value);
 
 	void Awake () {
@@ -181,8 +181,8 @@ public class UseRenderingPlugin : MonoBehaviour
 						Debug.LogError("GPU readback error!");
 					} else {
 						var bytes = request.GetData<byte>().ToArray();
-						UploadFrame(bytes, bytes.Length);
-						GL.IssuePluginEvent(GetRenderEventFunc(), 1);
+						UploadFrame(bytes, bytes.Length, 1);
+						//GL.IssuePluginEvent(GetRenderEventFunc(), 1);
 					}
 				});
 
