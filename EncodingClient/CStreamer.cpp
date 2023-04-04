@@ -400,7 +400,13 @@ void CStreamer::StreamImage(char* data, unsigned int length, unsigned int width,
         //snappy_status status = snappy_uncompressed_length(data, length, &uncompressedLength);
         char* uncompressedImage = new char[uncompressedLength];
 
-        snappy_uncompress(data, length, uncompressedImage, &uncompressedLength);
+        snappy_status status = snappy_uncompress(data, length, uncompressedImage, &uncompressedLength);
+
+        if (status == snappy_status::SNAPPY_BUFFER_TOO_SMALL) {
+            //printf("Buffer was too small!\n");
+            delete[] uncompressedImage;
+            return;
+        }
 
         // Use libjpeg-turbo to encode this as a JPEG image:
         tjhandle jpegCompressor = tjInitCompress();
