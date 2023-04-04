@@ -41,20 +41,26 @@ int main() {
 
 		//compress our random image:
 		size_t maxSize = snappy_max_compressed_length(image.size);
-		uint8_t* compressed = new uint8_t[maxSize];
-		Compress((const uint8_t*)image.data.c_str(), image.size, compressed, &maxSize);
-		size_t cSize = maxSize;
+		char* compressed = new char[maxSize];
+		snappy_status status = snappy_compress(image.data.c_str(), image.size, compressed, &maxSize);
+
+		if (status == snappy_status::SNAPPY_INVALID_INPUT) {
+			std::cout << "invalid input" << std::endl;
+		}
+		else if (status == snappy_status::SNAPPY_BUFFER_TOO_SMALL) {
+			std::cout << "buffer too small" << std::endl;
+		}
 		
 		auto t2 = std::chrono::high_resolution_clock::now();
 		auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1).count();
 
-		std::cout << "Size: " << image.size << " -> " << cSize << "; took " << duration << "ms" << std::endl;
+		std::cout << "Size: " << image.size << " -> " << maxSize << "; took " << duration << "ms" << std::endl;
 
-		g_Server->SendNewFrameToEveryone((unsigned char*)image.data.c_str(), image.size, width, height, 1);
+		g_Server->SendNewFrameToEveryone((unsigned char*)compressed, maxSize, width, height, 1);
 		//delete[] image.data;
 		delete[] compressed;
 
-		RakSleep(30);
+		RakSleep(66);
 	}
 
 	return 0;
