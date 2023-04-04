@@ -49,3 +49,5 @@ EncodingClient/x64/*
 EncodingClient/timings.csv
 
 UnityProject/Assets/Plugins/x86_64/Unity2GStreamerPlugin.dll
+
+UnityProject/UserSettings/Layouts/
