@@ -13,6 +13,8 @@
 #include "StreamDataManager.h"
 #include "JpegFrameParser.h"
 
+#include "snappy-c.h"
+
 CStreamer::CStreamer(SOCKET aClient, bool useTCP = false) :
     m_Client(aClient),
     m_TCPTransport(useTCP)
@@ -391,37 +393,14 @@ void LogToCSV(double time) {
 #define PACKETSIZE 1400
 void CStreamer::StreamImage(char* data, unsigned int length, unsigned int width, unsigned int height) {
     try {
-        // Fetch our image from the SD Manager:
-        //StreamData image = *StreamDataManager::Instance().GetDataForStream(StreamID + 1);
-
-        // Validate image data before compression
-        /*if (image.data == nullptr || image.width <= 0 || image.height <= 0 || image.size < image.width * image.height * 4) {
-            printf("Invalid image data: data=%p, width=%d, height=%d, size=%d\n", image.data, image.width, image.height, image.size);
-            return;
-        }*/
-
-        // Flip the image vertically
-        //for (int y = 0; y < height / 2; ++y) {
-        //    for (int x = 0; x < width; ++x) {
-        //        // Swap the pixel at (x,y) with the pixel at (x,height-y-1)
-        //        const int topIdx = y * width + x;
-        //        const int bottomIdx = (height - y - 1) * width + x;
-        //        const unsigned char tempR = data[topIdx * 4];
-        //        const unsigned char tempG = data[topIdx * 4 + 1];
-        //        const unsigned char tempB = data[topIdx * 4 + 2];
-        //        const unsigned char tempA = data[topIdx * 4 + 3];
-        //        data[topIdx * 4] = data[bottomIdx * 4];
-        //        data[topIdx * 4 + 1] = data[bottomIdx * 4 + 1];
-        //        data[topIdx * 4 + 2] = data[bottomIdx * 4 + 2];
-        //        data[topIdx * 4 + 3] = data[bottomIdx * 4 + 3];
-        //        data[bottomIdx * 4] = tempR;
-        //        data[bottomIdx * 4 + 1] = tempG;
-        //        data[bottomIdx * 4 + 2] = tempB;
-        //        data[bottomIdx * 4 + 3] = tempA;
-        //    }
-        //}
-
         auto t1 = std::chrono::high_resolution_clock::now();
+
+        //We need to decompress the image using snappy first:
+        size_t uncompressedLength = width * height * 4;
+        //snappy_status status = snappy_uncompressed_length(data, length, &uncompressedLength);
+        char* uncompressedImage = new char[uncompressedLength];
+
+        snappy_uncompress(data, length, uncompressedImage, &uncompressedLength);
 
         // Use libjpeg-turbo to encode this as a JPEG image:
         tjhandle jpegCompressor = tjInitCompress();
@@ -436,7 +415,7 @@ void CStreamer::StreamImage(char* data, unsigned int length, unsigned int width,
         m_compressedImage = (unsigned char*)data;
 
         // Compress image using libjpeg-turbo
-        int tjResult = tjCompress2(jpegCompressor, (const unsigned char*)data, width, 0, height, TJPF_ARGB, &m_compressedImage, &m_compressedImageSize, TJSAMP_420, jpegQuality, TJFLAG_FASTDCT);
+        int tjResult = tjCompress2(jpegCompressor, (const unsigned char*)uncompressedImage, width, 0, height, TJPF_ARGB, &m_compressedImage, &m_compressedImageSize, TJSAMP_420, jpegQuality, TJFLAG_FASTDCT);
 
         // Check for compression errors
         if (tjResult != 0) {
@@ -503,6 +482,7 @@ void CStreamer::StreamImage(char* data, unsigned int length, unsigned int width,
 
         //Free memory by parser:
         //delete[] parser.scandata;
+        delete[] uncompressedImage;
     }
     catch (const std::exception& e) {
         // Handle exceptions

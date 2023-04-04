@@ -40,6 +40,7 @@
       <Filter>gl3w</Filter>
     </ClCompile>
     <ClCompile Include="..\..\source\CCTVServer.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)..\..\lib\native\src\snappy-single-file.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Unity">
@@ -51,6 +52,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\source\RenderingPlugin.def" />
+    <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\source\RenderAPI_Metal.mm" />

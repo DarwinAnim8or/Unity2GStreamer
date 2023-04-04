@@ -19,6 +19,8 @@
 #include <thread>
 #include <future>
 
+#include "snappy-c.h"
+
 // --------------------------------------------------------------------------
 // SetTimeFromUnity, an example function we export which is called by one of the scripts.
 
@@ -226,8 +228,17 @@ extern "C" void UNITY_INTERFACE_EXPORT UNITY_INTERFACE_API UploadFrame(unsigned 
 			}
 		}
 
+		//Compress our image:
+		size_t compressedLength = snappy_max_compressed_length(length);
+		uint8_t* compressed = new uint8_t[compressedLength];
+		//size_t size = Compress(flippedData, bufferSize, compressed, compressedLength);
+
+		snappy_compress((const char*)flippedData, bufferSize, (char*)compressed, &compressedLength);
+
 		//g_Server->SendNewFrameToSingleEncodingClient(channelID, flippedData, bufferSize, width, height);
-		g_Server->SendNewFrameToEveryone(flippedData, bufferSize, width, height, channelID);
+		g_Server->SendNewFrameToEveryone(compressed, compressedLength, width, height, channelID);
+
+		delete[] compressed;
 		return;
 	}
 }

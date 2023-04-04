@@ -1,4 +1,6 @@
 #include "CCTVServer.h"
+#include <RakSleep.h>
+#include <future>
 
 //IMPORTANT: This should stay in sync with the client project. Increment the netversion if you make changes to this enum or the serialization of packets.
 int NET_VERSION = 4;
@@ -71,8 +73,6 @@ void CCTVServer::Update() {
 			m_lastRTSPPort++;
 
 			m_Clients.push_back(m_Packet->guid);
-
-			SendCreateNewChannel();
 		}
 
 		break;
@@ -100,11 +100,12 @@ void CCTVServer::SendHandshakeResponse(bool success, RakNetGUID& clientGUID) {
 	m_Peer->Send(&bs, PacketPriority::IMMEDIATE_PRIORITY, PacketReliability::RELIABLE_ORDERED, 0, clientGUID, false);
 }
 
-void CCTVServer::SendNewFrameToEveryone(unsigned char* bytes, size_t size, int width, int height) {
+void CCTVServer::SendNewFrameToEveryone(unsigned char* bytes, size_t size, int width, int height, int channelID) {
 	BitStream bitStream;
 	bitStream.Write((MessageID)Messages::ID_IMAGE_DATA);
 	bitStream.Write<unsigned int>(width);
 	bitStream.Write<unsigned int>(height);
+	bitStream.Write<unsigned int>(channelID);
 	bitStream.Write<unsigned int>((unsigned int)size);
 	bitStream.WriteAlignedBytes(reinterpret_cast<const unsigned char*>(bytes), size);
 
@@ -117,7 +118,16 @@ void CCTVServer::SendNewFrameToEveryone(unsigned char* bytes, size_t size, int w
 
 void CCTVServer::SendNewFrameToSingleEncodingClient(int channelID, unsigned char* bytes, size_t size, int width, int height) {
 	//Figure out who to send this to:
-	RakNetGUID guid = m_Clients[channelID];
+	RakNetGUID guid;
+	if (m_Clients.size() > channelID) {
+		guid = m_Clients[channelID];
+	}
+	else {
+		std::cout << "No client with ID: " << channelID << std::endl;
+		return;
+	}
+
+	if (guid == RakNetGUID()) return;
 
 	//Create our packet:
 	BitStream bitStream;
@@ -138,14 +148,11 @@ void CCTVServer::SendStreamSettings(RakNetGUID& guid, const StreamSettings& sett
 	m_Peer->Send(&bs, PacketPriority::IMMEDIATE_PRIORITY, PacketReliability::RELIABLE_ORDERED, 0, guid, false);
 }
 
-bool once = false;
-
 void CCTVServer::SendCreateNewChannel() {
-	if (once) return;
-	else once = true;
+	if (m_Clients.size() == 0) return;
 
-	//Simply use our first connection to tell them to make a new channel:
-	RakNetGUID guid = m_Clients[m_Clients.size() - 1];
+	//Simply use our first connection to tell them to make a new channel
+	RakNetGUID guid = m_Clients[0];
 	RakNet::BitStream bs;
 	bs.Write((MessageID)Messages::ID_CREATE_NEW_CHANNEL);
 	m_Peer->Send(&bs, PacketPriority::HIGH_PRIORITY, PacketReliability::RELIABLE_ORDERED, 0, guid, false);
@@ -159,6 +166,14 @@ void CCTVServer::Disconnect(RakNetGUID client) {
 			addr = RakNetGUID();
 		}
 	}
+}
+
+void CCTVServer::ClearAllClients() {
+	for (auto& addr : m_Clients) {
+		m_Peer->CloseConnection(addr, true);
+	}
+
+	m_Clients.clear();
 }
 
 RGBAImage CCTVServer::GenerateRandomRGBAImage(int width, int height) {

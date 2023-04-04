@@ -1,5 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="packages\Snappy.1.1.1.7\build\native\Snappy.props" Condition="Exists('packages\Snappy.1.1.1.7\build\native\Snappy.props')" />
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
       <Configuration>Debug</Configuration>
@@ -46,6 +47,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\source\RenderingPlugin.def" />
+    <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\source\RenderAPI_Metal.mm">
@@ -169,7 +171,7 @@ ENDLOCAL
       </PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
-      <AdditionalIncludeDirectories>../../;../../../3rdparty/RakNet/Source/;%GSTREAMER_ROOT_X86%/include/gstreamer-1.0/;%GSTREAMER_ROOT_X86%/include/glib-2.0/;%GSTREAMER_ROOT_X86%/lib\glib-2.0\include;../../../3rdparty/RakNet/Sources/</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../../;../../../3rdparty/RakNet/Source/;%GSTREAMER_ROOT_X86%/include/gstreamer-1.0/;%GSTREAMER_ROOT_X86%/include/glib-2.0/;%GSTREAMER_ROOT_X86%/lib\glib-2.0\include;../../../3rdparty/RakNet/Sources/;.\packages\Snappy.1.1.1.7\lib\native\include</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
@@ -242,17 +244,17 @@ ENDLOCAL
       </PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
-      <AdditionalIncludeDirectories>../../;../../../3rdparty/RakNet/Source/;%GSTREAMER_ROOT_X86%/include/gstreamer-1.0/;%GSTREAMER_ROOT_X86%/include/glib-2.0/;%GSTREAMER_ROOT_X86%/lib\glib-2.0\include;C:\Users\Stage\Documents\GitHub\Unity2GStreamer\3rdparty\RakNet\Source</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../../;../../../3rdparty/RakNet/Source/;%GSTREAMER_ROOT_X86%/include/gstreamer-1.0/;%GSTREAMER_ROOT_X86%/include/glib-2.0/;%GSTREAMER_ROOT_X86%/lib\glib-2.0\include;C:\Users\Stage\Documents\GitHub\Unity2GStreamer\3rdparty\RakNet\Source;..\..\..\3rdparty\zlib-1.2.13;.\packages\Snappy.1.1.1.7\lib\native\include</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>RakNetLibStatic.lib;big_x64.lib;ws2_32.lib;opengl32.lib;gstreamer-1.0.lib;glib-2.0.lib;gstbase-1.0.lib;gobject-2.0.lib;gstapp-1.0.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>RakNetLibStatic.lib;big_x64.lib;ws2_32.lib;opengl32.lib;zlibstat.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Windows</SubSystem>
       <OptimizeReferences>true</OptimizeReferences>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <ModuleDefinitionFile>../../source/RenderingPlugin.def</ModuleDefinitionFile>
-      <AdditionalLibraryDirectories>D:\gstreamer\1.0\msvc_x86_64\lib;%(AdditionalLibraryDirectories);../../../3rdparty/RakNet/build/Lib/LibStatic/Release/;../../../3rdparty/RakNet/DependentExtensions/cat/lib/cat/</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>D:\gstreamer\1.0\msvc_x86_64\lib;%(AdditionalLibraryDirectories);../../../3rdparty/RakNet/build/Lib/LibStatic/Release/;../../../3rdparty/RakNet/DependentExtensions/cat/lib/cat/;..\..\..\3rdparty\zlib-1.2.13\contrib\vstudio\vc14\x64\ZlibStatRelease</AdditionalLibraryDirectories>
     </Link>
     <PostBuildEvent>
       <Command>SETLOCAL
@@ -270,6 +272,11 @@ ENDLOCAL
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
-  <ImportGroup Label="ExtensionTargets">
-  </ImportGroup>
+  <ImportGroup Label="ExtensionTargets" />
+  <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
+    <PropertyGroup>
+      <ErrorText>This project references NuGet package(s) that are missing on this computer. Use NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
+    </PropertyGroup>
+    <Error Condition="!Exists('packages\Snappy.1.1.1.7\build\native\Snappy.props')" Text="$([System.String]::Format('$(ErrorText)', 'packages\Snappy.1.1.1.7\build\native\Snappy.props'))" />
+  </Target>
 </Project>

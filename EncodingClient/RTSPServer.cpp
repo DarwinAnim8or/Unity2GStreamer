@@ -282,6 +282,12 @@ void RakNetLoop() {
                         frameQueue3.push((char*)newData.data, newData.size);
                     }
 
+                    //temp write out frame data:
+                    std::ofstream file("frame.bin");
+                    for (int i = 0; i < newData.size; i++)
+                        file << newData.data[i];
+                    file.close();
+
                     width = newData.width;
                     height = newData.height;
 
