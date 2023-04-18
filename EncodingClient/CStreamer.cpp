@@ -397,13 +397,16 @@ void CStreamer::StreamImage(char* data, unsigned int length, unsigned int width,
 
         //We need to decompress the image using snappy first:
         size_t uncompressedLength = width * height * 4;
-        //snappy_status status = snappy_uncompressed_length(data, length, &uncompressedLength);
+        size_t snappyLength = 0;
+        snappy_status status = snappy_uncompressed_length(data, length, &snappyLength);
         char* uncompressedImage = new char[uncompressedLength];
 
-        snappy_status status = snappy_uncompress(data, length, uncompressedImage, &uncompressedLength);
+        status = snappy_uncompress(data, length, uncompressedImage, &uncompressedLength);
+        //assert(status != snappy_status::SNAPPY_OK);
 
         if (status == snappy_status::SNAPPY_BUFFER_TOO_SMALL) {
             //printf("Buffer was too small!\n");
+            //printf("%i\n", (int)status);
             delete[] uncompressedImage;
             return;
         }

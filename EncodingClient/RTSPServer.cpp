@@ -31,9 +31,9 @@
 
 using namespace RakNet;
 
-LockFreeQueue frameQueue(2, 1920000);
-LockFreeQueue frameQueue2(2, 1920000);
-LockFreeQueue frameQueue3(2, 1920000);
+LockFreeQueue frameQueue(2, 991721);
+LockFreeQueue frameQueue2(2, 991721);
+LockFreeQueue frameQueue3(2, 991721);
 //char* data = new char[2289828];
 
 StreamDataManager sm();
@@ -104,7 +104,7 @@ DWORD WINAPI SessionThreadHandler(LPVOID lpParam)
 
     char         RecvBuf[10000];                    // receiver buffer
     int          res;  
-    CStreamer    Streamer(Client, true);                  // our streamer for UDP/TCP based RTP transport
+    CStreamer    Streamer(Client, false);                  // our streamer for UDP/TCP based RTP transport
     CRtspSession RtspSession(Client,&Streamer);     // our threads RTSP session and state
     int          StreamID = 0;                      // the ID of the 2 JPEG samples streams which we support
     HANDLE       WaitEvents[2];                     // the waitable kernel objects of our session
@@ -238,6 +238,11 @@ void RakNetLoop() {
                     std::cout << "Handshake accepted: " << (int)isOk << std::endl;
                     if (!isOk) run = false;
                     else std::cout << "Awaiting streaming settings." << std::endl;
+
+                    //For debugging, print out our MTU size:
+                    auto mtu = peer->GetMTUSize(packet->systemAddress);
+                    std::cout << "MTU Size to server: " << mtu << " bytes" << std::endl;
+
                     break;
                 }
 
