@@ -140,8 +140,9 @@ static GLuint CreateShader(GLenum type, const char* sourceText)
 
 void RenderAPI_OpenGLCoreES::CreateResources()
 {
-#	if UNITY_WIN
-	gl3wInit();
+#	if UNITY_WIN && SUPPORT_OPENGL_CORE
+	if (m_APIType == kUnityGfxRendererOpenGLCore)
+		gl3wInit();
 #	endif
 	// Make sure that there are no GL error flags set before creating resources
 	while (glGetError() != GL_NO_ERROR) {}
