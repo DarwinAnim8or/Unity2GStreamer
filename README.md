@@ -9,21 +9,21 @@ This is to *allow* for the computer rendering your game to be unburdened by enco
 So, when you open the solution file for this project, you will see a number of projects loaded in. 
 They are the following:
 
-3rdparty:
+***3rdparty:***
 * RaknetLibStatic
   * RakNet is the library that is used in this project for communication between the server (plugin) and client. For more information, please see the [RakNet repo](https://github.com/LBBStudios/RakNet)
 
-Debugging:
+***Debugging:***
 * DummyServer
   * This is a simple application that uses the same CCTVServer class as the UnityLiveStreamingPlugin. This is because this program is meant to easily debug the network connection between the EncodingClient and the plugin.
 
-Main:
+***Main:***
 * EncodingClient
   * This is the client that connects with the Unity plugin when it starts. This is the thing that actually does the heavy lifting of encoding when a client connects to it over RTSP and has selected a channel.
 * UnityLiveStreamingPlugin
   * This is the main plugin. You'll want to include this into your Unity plugins folder. This project will also build staright to the plugins folder of the included sample Unity Project.
 
-Testing:
+***Testing:***
 * OnvifTest 
   * This program is close to an analog of DummyServer, where it's intended purpose is for debugging and testing the connection between Onvif and a VMS.
 
