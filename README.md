@@ -61,8 +61,7 @@ RakNet will need some settings modified in order to compile correctly inside our
 
 Go to "C/C++" -> "Code Generation" -> "Runtime Library". Set it to "Multi-threaded (/MT)" for all options except Debug. Debug sohuld be "Multi-threaded debug (/MTd)" 
 
-For the final step, simply open "NativeFeatureIncludesOverrides.h", and add "#define LIBCAT_SECURITY 0" in the middle of the file, before the #endif statement.
-Per info: libcat is the library RakNet uses for providing TLS-like encryption to the protocol. For this usecase, it is not relevant. 
+RakNet by default, at the time of writing, has security measures disabled by default. They can be enabled by going into the "NativeFeatureIncludesOverrides.h" file and defining LIBCAT_SECURITY 1; that said, for our usecase it is not needed to implement TLS-like security since it is meant to only go across LAN.
 
 ### Step 2: Build RakNet
 * Right-click on the Solution in the Solution Explorer.
