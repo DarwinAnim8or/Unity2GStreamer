@@ -54,7 +54,7 @@ int main() {
 		auto t2 = std::chrono::high_resolution_clock::now();
 		auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1).count();
 
-		std::cout << "Size: " << image.size << " -> " << maxSize << "; took " << duration << "ms" << std::endl;
+		//std::cout << "Size: " << image.size << " -> " << maxSize << "; took " << duration << "ms" << std::endl;
 
 		g_Server->SendNewFrameToEveryone((unsigned char*)compressed, maxSize, width, height, 1);
 		//delete[] image.data;
