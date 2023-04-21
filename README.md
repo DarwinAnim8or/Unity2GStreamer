@@ -59,7 +59,7 @@ While it would be possible to translate this into code for Linux, it is currentl
 
 RakNet will need some settings modified in order to compile correctly inside our Plugin's DLL. To do this, right-click your "RakNetLibStatic" project and go to "Properties". 
 
-Go to "C/C++" -> "Code Generation" -> "Runtime Library". Set it to "Multi-threaded (/MT)" for all options except Debug. Debug sohuld be "Multi-threaded debug (/MTd)" 
+Go to "C/C++" -> "Code Generation" -> "Runtime Library". Set it to "Multi-threaded (/MT)" for all options except Debug. Debug should be "Multi-threaded debug (/MTd)" 
 
 RakNet by default, at the time of writing, has security measures disabled by default. They can be enabled by going into the "NativeFeatureIncludesOverrides.h" file and defining LIBCAT_SECURITY 1; that said, for our usecase it is not needed to implement TLS-like security since it is meant to only go across LAN.
 
